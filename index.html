@@ -2,259 +2,367 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OTM 120H - MASTER V5.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTM 120H V5.5 - Sistema de Monitoreo Industrial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
+        
         :root {
-            --bg: #050505; --card: #121212; --accent: #ff5500; --blue: #0088ff; 
-            --text: #f0f0f0; --red: #ff2222; --green: #00e676; --border: #2a2a2a;
+            --fuego: #f97316;
+            --gases: #3b82f6;
+            --bg: #050505;
+            --panel: #111111;
         }
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 600px; padding-bottom: 20px; }
-        .card { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
-        h1 { color: var(--accent); font-size: 1.2rem; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 5px 0 15px 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+        body {
+            background-color: var(--bg);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* LOGIN SEGURO */
-        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .pin-box { background: var(--card); border: 2px solid var(--accent); padding: 30px; border-radius: 15px; text-align: center; width: 85%; max-width: 320px; }
-        .pin-box input { font-size: 2.5rem; text-align: center; letter-spacing: 10px; padding: 10px; border-radius: 8px; border: 1px solid var(--accent); background: #000; color: white; width: 80%; margin-bottom: 20px; }
+        .panel-industrial {
+            background: var(--panel);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
 
-        /* JERARQUÍA VISUAL: TI GIGANTE */
-        .ti-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 0; }
-        .ti-label { font-size: 0.9rem; color: #888; letter-spacing: 2px; text-transform: uppercase; }
-        .ti-display { font-size: 6rem; font-weight: 900; color: var(--accent); line-height: 1; margin: 10px 0; text-shadow: 0 0 30px rgba(255,85,0,0.5); }
-        .alert-zone { min-height: 25px; font-weight: bold; font-size: 0.9rem; text-align: center; width: 100%; }
-        .alert-red { color: var(--red); animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.3; } }
+        .ti-display {
+            font-size: 10rem;
+            line-height: 1;
+            font-weight: 900;
+            color: var(--fuego);
+            text-shadow: 0 0 30px rgba(249, 115, 22, 0.3);
+        }
 
-        /* GRID SYSTEM */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .brújula-giro {
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-        /* BRÚJULA Y FASE */
-        .compass-container { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .compass { width: 80px; height: 80px; border: 4px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; transition: transform 0.5s ease-out; margin-bottom: 10px; color: var(--accent); background: radial-gradient(circle, #222 0%, #000 100%); }
-        .turn-timer { font-size: 1.5rem; font-family: monospace; color: var(--green); font-weight: bold; margin: 5px 0; }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
 
-        /* INPUTS INDUSTRIALES */
-        input { background: #111; border: 1px solid #444; color: white; padding: 14px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 1.1rem; }
-        input:focus { border-color: var(--blue); outline: none; background: #1a1a1a; }
-        input::placeholder { color: #555; }
-        
-        .mode-btn { padding: 12px; border: 1px solid #333; background: #111; color: #777; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; width: 100%; }
-        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .bg-fuego { background-color: var(--fuego); }
+        .bg-gases { background-color: var(--gases); }
 
-        button.action-btn { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(255,85,0,0.3); }
-        button.action-btn:active { transform: scale(0.98); }
-        button.secondary-btn { background: #333; border: 1px solid #555; padding: 10px; border-radius: 6px; color: white; font-weight: bold; width: 100%; cursor: pointer; }
+        /* Estilos para ocultar flechas de inputs */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
 
-        /* BITÁCORA */
-        .log-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 10px; }
-        .log-table th { color: var(--blue); text-align: left; padding: 8px 4px; border-bottom: 2px solid var(--border); text-transform: uppercase; }
-        .log-table td { padding: 10px 4px; border-bottom: 1px solid #222; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #000; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        #lock-screen {
+            background: radial-gradient(circle, #111 0%, #000 100%);
+        }
     </style>
 </head>
-<body>
+<body class="p-4 lg:p-6">
 
-    <div id="login-screen">
-        <div class="pin-box">
-            <h2 style="color:var(--accent); margin-top:0;">CONTROL DE ACCESO</h2>
-            <p style="color:#888; font-size:0.8rem;">SISTEMA OTM 120H</p>
-            <input type="password" id="pin-input" inputmode="numeric" maxlength="4" placeholder="****">
-            <button class="action-btn" onclick="verifyPin()">DESBLOQUEAR</button>
+    <!-- PANTALLA DE BLOQUEO (SEGURIDAD PIN 1407) -->
+    <div id="lock-screen" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="panel-industrial p-10 rounded-[3rem] text-center max-w-sm w-full border border-white/10">
+            <h2 class="text-xl font-black uppercase tracking-widest mb-6">Seguridad OTM</h2>
+            <input type="password" id="pin-input" placeholder="****" maxlength="4" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-center text-5xl font-black text-fuego outline-none mb-6 tracking-[0.5em]">
+            <button onclick="checkPIN()" class="w-full bg-orange-600 hover:bg-orange-500 py-4 rounded-2xl font-black uppercase tracking-widest transition-all">Desbloquear</button>
+            <p class="mt-6 text-[10px] text-zinc-600 uppercase font-bold tracking-tighter">Acceso restringido a personal de ingeniería</p>
         </div>
     </div>
 
-    <div class="container" id="main-app" style="display:none;">
-        <h1>MONITOR MAESTRO V5.5</h1>
+    <!-- APP PRINCIPAL -->
+    <div id="app-main" class="hidden max-w-[1600px] mx-auto space-y-6">
         
-        <div class="card grid-2" style="border-left: 5px solid var(--blue);">
-            <div>
-                <div id="phase-title" style="font-weight:900; color:var(--blue); font-size:1.4rem;">FASE 1</div>
-                <div id="phase-temp" style="font-size:0.8rem; color:#aaa;">Rango: 120-150°C</div>
-                <div id="phase-draft" style="font-size:0.8rem; color:#aaa;">Draft: -1.0 a -2.5</div>
+        <!-- HEADER INDUSTRIAL -->
+        <header class="panel-industrial p-6 rounded-[2.5rem] flex flex-wrap items-center justify-between gap-6">
+            <div class="flex items-center gap-5">
+                <div class="bg-fuego p-4 rounded-3xl shadow-lg">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black italic tracking-tighter uppercase">OTM 120H <span class="text-fuego">V5.5</span></h1>
+                    <div class="flex gap-4 mt-2">
+                        <input type="text" id="op_name" placeholder="OPERADOR" class="bg-transparent border-b border-zinc-800 text-[10px] font-black uppercase outline-none focus:border-fuego w-32 pb-1">
+                        <input type="text" id="op_punta" placeholder="PUNTA" class="bg-transparent border-b border-zinc-800 text-[10px] font-black uppercase outline-none focus:border-fuego w-24 pb-1">
+                    </div>
+                </div>
             </div>
-            <div style="text-align:right; display:flex; flex-direction:column; justify-content:center;">
-                <div style="font-size:0.7rem; color:#888;">TIEMPO DE CURADO</div>
-                <div id="global-timer" style="font-family:monospace; font-size:1.6rem; font-weight:bold;">00:00:00</div>
-            </div>
-        </div>
 
-        <div class="card ti-container">
-            <div class="ti-label">Temperatura Interna (Ti)</div>
-            <div class="ti-display" id="ti-display">---°C</div>
-            <div id="main-alert" class="alert-zone"></div>
-        </div>
+            <div class="flex items-center gap-8">
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Reloj Maestro Curado</p>
+                    <div id="master-clock" class="text-4xl font-black mono text-white tracking-tighter">000:00:00</div>
+                </div>
+                <div class="flex items-center gap-2 px-4 py-2 bg-black rounded-2xl border border-white/5">
+                    <div id="sync-dot" class="status-dot bg-emerald-500"></div>
+                    <span id="sync-text" class="text-[9px] font-black text-emerald-500 uppercase">Sincronizado</span>
+                </div>
+                <button id="btn-master" onclick="toggleClock()" class="bg-gases px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-80 transition-all">Iniciar</button>
+            </div>
+        </header>
 
-        <div class="card grid-2">
-            <div class="compass-container" style="border-right: 1px solid var(--border);">
-                <div id="compass" class="compass">0°</div>
-                <div style="font-size:0.7rem; color:#888;">PRÓXIMO GIRO EN:</div>
-                <div id="turn-timer" class="turn-timer">00:00</div>
-                <button class="secondary-btn" style="margin-top:5px; font-size:0.75rem;" onclick="markTurn()">MARCAR GIRO +90°</button>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding-left:10px;">
-                <div style="font-size:0.7rem; color:#888; text-transform:uppercase;">Diagnóstico Draft</div>
-                <div id="draft-status" style="font-size:1.1rem; font-weight:bold; margin:10px 0; color:var(--blue); text-align:center;">ESPERANDO LECTURA</div>
-                <div id="draft-action" style="font-size:0.85rem; font-weight:bold; text-align:center;">---</div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="grid-2" style="margin-bottom:15px;">
-                <button class="mode-btn active" id="btn-tc" onclick="toggleMode('TC')">MODO TC</button>
-                <button class="mode-btn" id="btn-laser" onclick="toggleMode('LASER')">MODO LÁSER</button>
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <div id="area-tc" style="margin-bottom:15px;">
-                <input type="number" id="in-tc" placeholder="Lectura Termocupla (°C)">
-            </div>
-            
-            <div id="area-laser" class="grid-3" style="display:none; margin-bottom:15px;">
-                <input type="number" id="in-l1" placeholder="L1 Carga">
-                <input type="number" id="in-l2" placeholder="L2 Centro">
-                <input type="number" id="in-l3" placeholder="L3 Desc.">
+            <!-- PANEL IZQUIERDO: BRÚJULAS Y FASES -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- BRÚJULA DE FASE ACTUAL -->
+                <section class="panel-industrial p-6 rounded-[2.5rem] border-l-8 border-fuego space-y-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 id="phase-label" class="text-fuego text-xs font-black uppercase tracking-widest italic">Brújula de Fase 1</h2>
+                        <span id="freq-indicator" class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black">🟢 NORMAL</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
+                            <span class="text-[9px] font-bold text-zinc-500 uppercase">Temp Meta</span>
+                            <span id="target-temp" class="text-xs font-black text-white">120 - 150°C</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
+                            <span class="text-[9px] font-bold text-zinc-500 uppercase">Draft Ideal</span>
+                            <span id="target-draft" class="text-xs font-black text-gases">-1.0 / -2.5</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
+                            <span class="text-[9px] font-bold text-zinc-500 uppercase">Frecuencia</span>
+                            <span id="target-freq" class="text-xs font-black text-white">30 min</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- BRÚJULA DE GIRO -->
+                <section id="rotation-card" class="panel-industrial p-8 rounded-[2.5rem] text-center relative overflow-hidden">
+                    <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-6">Posición del Horno (90°)</p>
+                    <div class="relative w-36 h-36 mx-auto bg-black rounded-full border-4 border-zinc-900 flex items-center justify-center">
+                        <div id="compass-dial" class="absolute inset-0 brújula-giro flex items-center justify-center">
+                            <div class="w-1 h-16 bg-gradient-to-t from-fuego to-transparent rounded-full relative">
+                                <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-fuego rounded-full border-4 border-black"></div>
+                            </div>
+                        </div>
+                        <div class="text-[9px] font-black text-zinc-800 absolute top-2">NORTE</div>
+                        <div id="giro-text" class="text-xl font-black mono text-zinc-400 z-10">0°</div>
+                    </div>
+                    <div id="rotation-timer" class="text-4xl font-black mono text-gases mt-6">60:00</div>
+                    <button onclick="confirmRotation()" class="w-full mt-6 bg-white/5 hover:bg-white/10 border border-white/10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Confirmar Giro</button>
+                </section>
             </div>
 
-            <div style="margin-bottom:15px;">
-                <input type="number" id="in-draft" placeholder="Lectura Draft (ej. -1.5)" step="0.1">
+            <!-- PANEL CENTRAL: MONITOR Y MEDICIÓN -->
+            <div class="lg:col-span-6 space-y-6">
+                <!-- MONITOR DOMINANTE -->
+                <section class="panel-industrial p-10 rounded-[3.5rem] text-center border-t-8 border-fuego relative">
+                    <p class="text-[11px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-4 italic">Temperatura Interna Proyectada ($T_i$)</p>
+                    <div id="main-ti" class="ti-display tracking-tighter">0<span class="text-4xl ml-2 font-black text-zinc-800 italic">°C</span></div>
+                    
+                    <div class="flex justify-center gap-4 mt-8">
+                        <div id="mode-badge" class="px-4 py-1.5 bg-fuego text-white text-[10px] font-black rounded-full uppercase">Modo: Termocupla</div>
+                        <div id="ratio-badge" class="px-4 py-1.5 bg-zinc-900 border border-white/10 text-fuego text-[10px] font-black rounded-full mono italic">Relación: 3.50x</div>
+                    </div>
+                </section>
+
+                <!-- ENTRADA DINÁMICA -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <section class="panel-industrial p-8 rounded-[2.5rem]">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xs font-black text-zinc-500 uppercase tracking-widest">Captura Térmica</h3>
+                            <button onclick="switchMode()" class="text-[9px] font-black bg-zinc-800 hover:bg-zinc-700 px-3 py-1 rounded-lg transition-all uppercase">Cambiar Sensor</button>
+                        </div>
+                        <div id="inputs-box" class="space-y-4">
+                            <!-- Inyección dinámica JS -->
+                        </div>
+                    </section>
+
+                    <section class="panel-industrial p-8 rounded-[2.5rem] flex flex-col justify-between border-l-4 border-gases">
+                        <div>
+                            <h3 class="text-xs font-black text-gases uppercase tracking-widest mb-6 italic">Dinámica de Gases</h3>
+                            <div class="bg-black p-6 rounded-3xl text-center border border-white/5">
+                                <label class="text-[10px] font-black text-gases uppercase block mb-4">Pitot (mmca)</label>
+                                <input type="number" id="in-draft" step="0.1" class="bg-transparent text-6xl font-black text-white w-full text-center outline-none mono" placeholder="0.0" oninput="process()">
+                            </div>
+                        </div>
+                        <button onclick="saveRecord()" class="w-full mt-6 bg-fuego py-6 rounded-3xl font-black uppercase text-sm tracking-[0.2em] shadow-2xl hover:brightness-110 active:scale-95 transition-all">
+                            Grabar Punto de Control
+                        </button>
+                    </section>
+                </div>
+
+                <!-- ALERTAS IA MONITOR -->
+                <section class="panel-industrial p-6 rounded-[2.5rem] border border-blue-500/20 bg-blue-500/5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-2 h-2 bg-gases rounded-full animate-ping"></div>
+                        <span class="text-[10px] font-black text-gases uppercase tracking-widest">IA Monitor: Análisis de Seguridad</span>
+                    </div>
+                    <div id="ia-console" class="text-xs font-bold text-zinc-400 italic space-y-2">
+                        Esperando sincronización de datos operativos...
+                    </div>
+                </section>
             </div>
 
-            <div class="grid-2">
-                <input type="text" id="in-op" placeholder="Operador">
-                <input type="text" id="in-punta" placeholder="Punta (Turno)">
+            <!-- PANEL DERECHO: BITÁCORA -->
+            <div class="lg:col-span-3">
+                <section class="panel-industrial h-full rounded-[2.5rem] flex flex-col overflow-hidden">
+                    <div class="p-5 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                        <span class="text-[10px] font-black text-zinc-500 uppercase italic">Bitácora Técnica</span>
+                        <button onclick="exportCSV()" class="text-[9px] font-bold text-gases hover:underline">EXPORTAR CSV</button>
+                    </div>
+                    <div id="log-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll font-mono text-[9px]">
+                        <!-- Entradas de bitácora -->
+                    </div>
+                </section>
             </div>
-            
-            <button class="action-btn" onclick="saveRecord()">REGISTRAR LECTURA</button>
-        </div>
-
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold; color:var(--blue); font-size:0.9rem;">BITÁCORA OPERATIVA</span>
-                <button class="secondary-btn" style="width:auto; font-size:0.7rem;" onclick="exportCSV()">EXPORTAR CSV</button>
-            </div>
-            <table class="log-table">
-                <thead><tr><th>Hora</th><th>Op/Punta</th><th>Modo</th><th>Ti</th><th>Draft</th></tr></thead>
-                <tbody id="log-body"></tbody>
-            </table>
         </div>
     </div>
 
-    <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
+    <!-- AUDIO BEEP (GENERADO POR SINTESIS) -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function beep() {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = "sine";
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+    </script>
 
     <script>
-        // VARIABLES GLOBALES Y PERSISTENCIA
-        let mode = 'TC';
-        let currentAngle = parseInt(localStorage.getItem('otm_angle')) || 0;
-        let wakeLock = null;
-        
-        let startTime = localStorage.getItem('otm_start_v55');
-        if(!startTime) { startTime = Date.now(); localStorage.setItem('otm_start_v55', startTime); }
-        else { startTime = parseInt(startTime); }
+        // --- CONSTANTES DE INGENIERÍA ---
+        const PIN_ACCESO = "1407";
+        const RATIO = 3.5;
+        const LIMITE_BANANA_WARN = 80;
+        const LIMITE_BANANA_CRIT = 120;
+        const LIMITE_SALTO = 40; // °C en 10 min
 
-        let lastTurnTime = localStorage.getItem('otm_last_turn');
-        if(!lastTurnTime) { lastTurnTime = Date.now(); localStorage.setItem('otm_last_turn', lastTurnTime); }
-        else { lastTurnTime = parseInt(lastTurnTime); }
+        // --- ESTADO DEL SISTEMA ---
+        let state = {
+            active: false,
+            mode: 'TC', // 'TC' o 'LASER'
+            seconds: parseInt(localStorage.getItem('otm_55_sec')) || 0,
+            phase: 1,
+            rotSeconds: 0,
+            giroDeg: 0,
+            freqMode: 'NORMAL', // 'NORMAL' o 'INTENSIVE'
+            stableCount: 0,
+            lastSaveTime: 0,
+            lastTi: 0,
+            logs: JSON.parse(localStorage.getItem('otm_55_logs')) || []
+        };
 
-        let logs = JSON.parse(localStorage.getItem('otm_logs_v55')) || [];
+        const FASES = {
+            1: { name: "Fase 1: Deshidratación", h: 24, temp: [120, 150], draft: [-1.0, -2.5], rot: 60, freq: 30 },
+            2: { name: "Fase 2: Calentamiento", h: 72, temp: [320, 350], draft: [-1.2, -2.5], rot: 30, freq: 30 },
+            3: { name: "Fase 3: Curado Final", h: 120, temp: [600, 650], draft: [-1.5, -2.5], rot: 15, freq: 30 }
+        };
 
-        // CONSTANTES FÍSICAS
-        const FACTOR_REFRACTARIO = 3.5;
-        const LIMITE_TEMP = 850;
-        const EFECTO_BANANA_MAX = 80;
-
-        // ESTADOS DE FASE
-        let currentPhaseInfo = {};
-
-        // INICIALIZACIÓN DE UI
-        document.getElementById('compass').style.transform = `rotate(${currentAngle}deg)`;
-        document.getElementById('compass').innerText = `${currentAngle}°`;
-
-        // 1. SEGURIDAD Y WAKELOCK
-        async function enableWakeLock() {
-            try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-        }
-
-        function verifyPin() {
-            const pin = document.getElementById('pin-input').value.trim();
-            if(pin === '1407') {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
-                enableWakeLock();
-                renderLogs();
-                setInterval(engineTick, 1000);
-                engineTick(); // Llamada inicial
+        // --- SEGURIDAD ---
+        function checkPIN() {
+            const input = document.getElementById('pin-input').value;
+            if (input === PIN_ACCESO) {
+                document.getElementById('lock-screen').style.display = 'none';
+                document.getElementById('app-main').style.display = 'block';
+                init();
             } else {
-                alert('ACCESO DENEGADO: PIN INCORRECTO');
-                document.getElementById('pin-input').value = '';
+                state.logs.unshift({h: 'SECURITY', op: 'FAIL', ti: 'PIN', mode: 'ALERT', draft: '0'});
+                saveToLocal();
+                alert("Acceso Denegado. Intento registrado.");
             }
         }
 
-        // 2. INTERFAZ
-        function toggleMode(selected) {
-            mode = selected;
-            document.getElementById('btn-tc').classList.toggle('active', mode === 'TC');
-            document.getElementById('btn-laser').classList.toggle('active', mode === 'LASER');
-            document.getElementById('area-tc').style.display = mode === 'TC' ? 'block' : 'none';
-            document.getElementById('area-laser').style.display = mode === 'LASER' ? 'grid' : 'none';
+        function init() {
+            document.getElementById('op_name').value = localStorage.getItem('otm_55_op') || '';
+            document.getElementById('op_punta').value = localStorage.getItem('otm_55_punta') || '';
+            renderInputs();
+            renderLogs();
+            setInterval(tick, 1000);
         }
 
-        // 3. MOTOR DE TIEMPO Y FASES
-        function engineTick() {
-            const now = Date.now();
-            
-            // Cronómetro Global
-            const diffGlobal = now - startTime;
-            const h = Math.floor(diffGlobal / 3600000);
-            const m = Math.floor((diffGlobal % 3600000) / 60000);
-            const s = Math.floor((diffGlobal % 60000) / 1000);
-            document.getElementById('global-timer').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        // --- MOTOR DE TIEMPO ---
+        function toggleClock() {
+            state.active = !state.active;
+            const btn = document.getElementById('btn-master');
+            btn.innerText = state.active ? "Pausar" : "Reanudar";
+            btn.className = state.active ? "bg-red-600 px-6 py-3 rounded-2xl font-black text-xs uppercase" : "bg-gases px-6 py-3 rounded-2xl font-black text-xs uppercase";
+        }
 
-            // Determinar Fase
-            let phaseNum = 1, tempGoal = "120-150°C", turnIntervalMins = 60, draftMin = -1.0, draftMax = -2.5;
-            if (h >= 24 && h < 72) { phaseNum = 2; tempGoal = "320-350°C"; turnIntervalMins = 30; draftMin = -1.2; }
-            else if (h >= 72) { phaseNum = 3; tempGoal = "600-650°C"; turnIntervalMins = 15; draftMin = -1.5; }
-            
-            currentPhaseInfo = { min: draftMin, max: draftMax };
+        function tick() {
+            if (!state.active) return;
 
-            document.getElementById('phase-title').innerText = `FASE ${phaseNum}`;
-            document.getElementById('phase-temp').innerText = `Rango: ${tempGoal}`;
-            document.getElementById('phase-draft').innerText = `Draft: ${draftMin} a ${draftMax}`;
+            state.seconds++;
+            saveToLocal();
 
-            // Cronómetro de Giro
-            const diffTurn = now - lastTurnTime;
-            const turnMinsElapsed = Math.floor(diffTurn / 60000);
-            const turnSecsElapsed = Math.floor((diffTurn % 60000) / 1000);
-            
-            let minsLeft = turnIntervalMins - turnMinsElapsed - 1;
-            let secsLeft = 59 - turnSecsElapsed;
-
-            if (minsLeft < 0) { minsLeft = 0; secsLeft = 0; } // Evitar negativos si se pasa
-
-            document.getElementById('turn-timer').innerText = `${String(minsLeft).padStart(2,'0')}:${String(secsLeft).padStart(2,'0')}`;
-
-            // Alarma de Giro
-            if (minsLeft === 0 && secsLeft === 0) {
-                document.getElementById('turn-timer').style.color = "var(--red)";
-                document.getElementById('alarm-sound').play().catch(()=>{});
-                if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
-            } else {
-                document.getElementById('turn-timer').style.color = "var(--green)";
+            // Lógica de Fases
+            const hours = state.seconds / 3600;
+            let p = 1;
+            if (hours >= 24) p = 2;
+            if (hours >= 72) p = 3;
+            if (p !== state.phase) {
+                state.phase = p;
+                confirmRotation(); // Reset rotación al cambiar fase
             }
+
+            // Lógica de Giro
+            if (state.rotSeconds > 0) {
+                state.rotSeconds--;
+            } else {
+                document.getElementById('rotation-card').classList.add('alert-active');
+                if (state.seconds % 60 === 0) beep();
+            }
+
+            updateUI();
+            process();
         }
 
-        function markTurn() {
-            currentAngle = (currentAngle + 90) % 360;
-            localStorage.setItem('otm_angle', currentAngle);
-            document.getElementById('compass').style.transform = `rotate(${currentAngle}deg)`;
-            document.getElementById('compass').innerText = `${currentAngle}°`;
+        // --- UI & INTERACCIÓN ---
+        function updateUI() {
+            const h = Math.floor(state.seconds / 3600).toString().padStart(3, '0');
+            const m = Math.floor((state.seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (state.seconds % 60).toString().padStart(2, '0');
+            document.getElementById('master-clock').innerText = `${h}:${m}:${s}`;
+
+            const f = FASES[state.phase];
+            document.getElementById('phase-label').innerText = `Brújula de ${f.name}`;
+            document.getElementById('target-temp').innerText = `${f.temp[0]} - ${f.temp[1]}°C`;
+            document.getElementById('target-draft').innerText = `${f.draft[0].toFixed(1)} / ${f.draft[1].toFixed(1)}`;
             
-            lastTurnTime = Date.now();
-            localStorage.setItem('otm_last_turn', lastTurnTime);
-            engineTick(); // Forzar actualización visual
+            // Frecuencia Inteligente UI
+            const freqVal = (state.phase === 1 && hours() < 6) ? 15 : f.freq;
+            document.getElementById('target-freq').innerText = state.freqMode === 'INTENSIVE' ? '15 min (Intensivo)' : `${freqVal} min`;
+            
+            const freqInd = document.getElementById('freq-indicator');
+            if (state.freqMode === 'INTENSIVE') {
+                freqInd.innerText = "🟡 INTENSIVO";
+                freqInd.className = "px-2 py-1 rounded bg-orange-500/10 text-orange-500 text-[9px] font-black";
+            } else {
+                freqInd.innerText = "🟢 NORMAL";
+                freqInd.className = "px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black";
+            }
+
+            const rm = Math.floor(state.rotSeconds / 60).toString().padStart(2, '0');
+            const rs = (state.rotSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('rotation-timer').innerText = `${rm}:${rs}`;
         }
 
-        // 4. PROCESAMIENTO DE DATOS
-        function saveRecord() {
-            const op = document.getElementById('in-op').value.trim();
-            const punta = document.getElementById('in-punta').value.trim();
+        function renderInputs() {
+            const box = document.getElementById('inputs-box');
+            if (state.mode === 'TC') {
+                box.innerHTML = `
+                    <div class="bg-black/50 p-6 rounded-2xl border border-white/5 shadow-inner">
+                        <label class="text-[9px] font-black text-zinc-600 uppercase block mb-2 tracking-widest">Termocupla Directa (Ti)</label>
+                        <input type="number" id="in-tc" class="w-full bg-transparent text-5xl font-black text-fuego outline-none mono" placeholder="000" oninput="process()">
+                    </div>`;
+            } else {
+                box.innerHTML = `
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L1 Carga</span><input type="number" id="l1" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
+           
