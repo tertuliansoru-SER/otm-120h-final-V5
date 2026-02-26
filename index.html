@@ -5,235 +5,256 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>OTM 120H - MASTER V5.5</title>
     <style>
-        :root { --bg: #0a0a0a; --card: #161616; --accent: #ff6600; --blue: #00aaff; --text: #e0e0e0; --red: #ff3333; --green: #00ff88; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 500px; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #222; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        h1 { color: var(--accent); font-size: 1.1rem; text-align: center; letter-spacing: 2px; margin: 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        :root {
+            --bg: #050505; --card: #121212; --accent: #ff5500; --blue: #0088ff; 
+            --text: #f0f0f0; --red: #ff2222; --green: #00e676; --border: #2a2a2a;
+        }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 600px; padding-bottom: 20px; }
+        .card { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+        h1 { color: var(--accent); font-size: 1.2rem; text-align: center; letter-spacing: 2px; text-transform: uppercase; margin: 5px 0 15px 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
         
         /* LOGIN SEGURO */
-        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; }
-        .pin-box { background: var(--card); border: 2px solid var(--accent); padding: 30px; border-radius: 20px; text-align: center; width: 80%; max-width: 300px; }
-        
-        /* TI DISPLAY GIGANTE */
-        .ti-label { text-align: center; font-size: 0.8rem; color: #888; letter-spacing: 1px; }
-        .ti-display { font-size: 5.5rem; font-weight: 900; color: var(--accent); text-align: center; line-height: 1; margin: 10px 0; text-shadow: 0 0 25px rgba(255,102,0,0.4); }
-        
-        /* GIRO Y DRAFT */
-        .compass { width: 90px; height: 90px; border: 3px solid var(--accent); border-radius: 50%; margin: 10px auto; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: var(--accent); }
-        .btn-giro { width: 100%; padding: 10px; background: #252525; color: white; border: 1px solid #444; border-radius: 6px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .pin-box { background: var(--card); border: 2px solid var(--accent); padding: 30px; border-radius: 15px; text-align: center; width: 85%; max-width: 320px; }
+        .pin-box input { font-size: 2.5rem; text-align: center; letter-spacing: 10px; padding: 10px; border-radius: 8px; border: 1px solid var(--accent); background: #000; color: white; width: 80%; margin-bottom: 20px; }
+
+        /* JERARQUÍA VISUAL: TI GIGANTE */
+        .ti-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 0; }
+        .ti-label { font-size: 0.9rem; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+        .ti-display { font-size: 6rem; font-weight: 900; color: var(--accent); line-height: 1; margin: 10px 0; text-shadow: 0 0 30px rgba(255,85,0,0.5); }
+        .alert-zone { min-height: 25px; font-weight: bold; font-size: 0.9rem; text-align: center; width: 100%; }
+        .alert-red { color: var(--red); animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.3; } }
+
+        /* GRID SYSTEM */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+        /* BRÚJULA Y FASE */
+        .compass-container { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .compass { width: 80px; height: 80px; border: 4px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; transition: transform 0.5s ease-out; margin-bottom: 10px; color: var(--accent); background: radial-gradient(circle, #222 0%, #000 100%); }
+        .turn-timer { font-size: 1.5rem; font-family: monospace; color: var(--green); font-weight: bold; margin: 5px 0; }
 
         /* INPUTS INDUSTRIALES */
-        input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1.1rem; margin-top: 8px; }
-        input:focus { border-color: var(--accent); outline: none; background: #222; }
-        .mode-selector { display: flex; gap: 8px; margin-bottom: 12px; }
-        .mode-btn { flex: 1; padding: 12px; border: 1px solid #333; background: #1a1a1a; color: #666; border-radius: 8px; font-weight: bold; }
-        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(255,102,0,0.3); }
+        input { background: #111; border: 1px solid #444; color: white; padding: 14px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 1.1rem; }
+        input:focus { border-color: var(--blue); outline: none; background: #1a1a1a; }
+        input::placeholder { color: #555; }
         
-        button.save { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 900; font-size: 1.2rem; margin-top: 15px; cursor: pointer; }
-        
-        /* ALERTAS */
-        .alert-area { min-height: 20px; color: var(--red); font-weight: bold; text-align: center; font-size: 0.85rem; margin-top: 5px; }
-        .draft-status { font-size: 0.7rem; font-weight: bold; margin-top: 5px; }
+        .mode-btn { padding: 12px; border: 1px solid #333; background: #111; color: #777; border-radius: 6px; font-weight: bold; font-size: 0.9rem; cursor: pointer; width: 100%; }
+        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+        button.action-btn { width: 100%; padding: 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(255,85,0,0.3); }
+        button.action-btn:active { transform: scale(0.98); }
+        button.secondary-btn { background: #333; border: 1px solid #555; padding: 10px; border-radius: 6px; color: white; font-weight: bold; width: 100%; cursor: pointer; }
 
         /* BITÁCORA */
         .log-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 10px; }
-        .log-table th { color: var(--blue); text-align: left; padding: 8px 5px; border-bottom: 2px solid #333; }
-        .log-table td { padding: 10px 5px; border-bottom: 1px solid #222; }
+        .log-table th { color: var(--blue); text-align: left; padding: 8px 4px; border-bottom: 2px solid var(--border); text-transform: uppercase; }
+        .log-table td { padding: 10px 4px; border-bottom: 1px solid #222; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
         <div class="pin-box">
-            <h2 style="color:var(--accent); margin-bottom:20px;">SEGURIDAD OTM</h2>
-            <input type="password" id="pin" placeholder="PIN" inputmode="numeric" style="width:100%; font-size:2rem; letter-spacing:8px;">
-            <button class="save" onclick="checkLogin()">DESBLOQUEAR</button>
+            <h2 style="color:var(--accent); margin-top:0;">CONTROL DE ACCESO</h2>
+            <p style="color:#888; font-size:0.8rem;">SISTEMA OTM 120H</p>
+            <input type="password" id="pin-input" inputmode="numeric" maxlength="4" placeholder="****">
+            <button class="action-btn" onclick="verifyPin()">DESBLOQUEAR</button>
         </div>
     </div>
 
     <div class="container" id="main-app" style="display:none;">
-        <h1>CONTROL MAESTRO OTM 120H</h1>
+        <h1>MONITOR MAESTRO V5.5</h1>
         
-        <div class="card grid" style="display: grid; grid-template-columns: 1.2fr 0.8fr;">
-            <div style="border-left: 4px solid var(--blue); padding-left: 10px;">
-                <div id="phase-text" style="font-weight:bold; color:var(--blue); font-size:1.2rem;">FASE 1</div>
-                <div id="phase-goal" style="font-size:0.75rem; color:#888;">Objetivo: 120-150°C</div>
+        <div class="card grid-2" style="border-left: 5px solid var(--blue);">
+            <div>
+                <div id="phase-title" style="font-weight:900; color:var(--blue); font-size:1.4rem;">FASE 1</div>
+                <div id="phase-temp" style="font-size:0.8rem; color:#aaa;">Rango: 120-150°C</div>
+                <div id="phase-draft" style="font-size:0.8rem; color:#aaa;">Draft: -1.0 a -2.5</div>
             </div>
-            <div style="text-align:right;">
-                <div id="timer-display" style="font-family:monospace; font-size:1.3rem; color:var(--green);">00:00:00</div>
-                <div style="font-size:0.6rem; color:#555;">TIEMPO DE CURADO</div>
+            <div style="text-align:right; display:flex; flex-direction:column; justify-content:center;">
+                <div style="font-size:0.7rem; color:#888;">TIEMPO DE CURADO</div>
+                <div id="global-timer" style="font-family:monospace; font-size:1.6rem; font-weight:bold;">00:00:00</div>
+            </div>
+        </div>
+
+        <div class="card ti-container">
+            <div class="ti-label">Temperatura Interna (Ti)</div>
+            <div class="ti-display" id="ti-display">---°C</div>
+            <div id="main-alert" class="alert-zone"></div>
+        </div>
+
+        <div class="card grid-2">
+            <div class="compass-container" style="border-right: 1px solid var(--border);">
+                <div id="compass" class="compass">0°</div>
+                <div style="font-size:0.7rem; color:#888;">PRÓXIMO GIRO EN:</div>
+                <div id="turn-timer" class="turn-timer">00:00</div>
+                <button class="secondary-btn" style="margin-top:5px; font-size:0.75rem;" onclick="markTurn()">MARCAR GIRO +90°</button>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding-left:10px;">
+                <div style="font-size:0.7rem; color:#888; text-transform:uppercase;">Diagnóstico Draft</div>
+                <div id="draft-status" style="font-size:1.1rem; font-weight:bold; margin:10px 0; color:var(--blue); text-align:center;">ESPERANDO LECTURA</div>
+                <div id="draft-action" style="font-size:0.85rem; font-weight:bold; text-align:center;">---</div>
             </div>
         </div>
 
         <div class="card">
-            <div class="ti-label">TEMPERATURA INTERNA (Ti)</div>
-            <div class="ti-display" id="ti-val">---°C</div>
-            <div id="alert-msg" class="alert-area"></div>
-        </div>
-
-        <div class="card" style="display: grid; grid-template-columns: 1fr 1fr; gap:15px;">
-            <div style="text-align:center; border-right: 1px solid #333;">
-                <div id="compass-ui" class="compass">0°</div>
-                <button class="btn-giro" onclick="rotate90()">Giro +90°</button>
-                <div id="turn-countdown" style="font-size:0.65rem; color:var(--green); margin-top:8px; font-weight:bold;">Prox: 60m</div>
-            </div>
-            <div style="text-align:center;">
-                <div style="font-size:0.7rem; color:#888; text-transform:uppercase;">Tiro (Draft)</div>
-                <div id="draft-icon" style="font-size:2rem; margin:5px 0;">--</div>
-                <div id="draft-advice" class="draft-status" style="color:var(--blue);">SIN DATOS</div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="mode-selector">
-                <button class="mode-btn active" id="btn-tc" onclick="setMode('TC')">TERMOCUPLA</button>
-                <button class="mode-btn" id="btn-laser" onclick="setMode('LASER')">P. LÁSER</button>
+            <div class="grid-2" style="margin-bottom:15px;">
+                <button class="mode-btn active" id="btn-tc" onclick="toggleMode('TC')">MODO TC</button>
+                <button class="mode-btn" id="btn-laser" onclick="toggleMode('LASER')">MODO LÁSER</button>
             </div>
             
-            <div id="input-tc">
-                <input type="number" id="val-tc" placeholder="Lectura TC (°C)">
+            <div id="area-tc" style="margin-bottom:15px;">
+                <input type="number" id="in-tc" placeholder="Lectura Termocupla (°C)">
             </div>
-            <div id="input-laser" style="display:none;">
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px;">
-                    <input type="number" id="l1" placeholder="Carga">
-                    <input type="number" id="l2" placeholder="Centro">
-                    <input type="number" id="l3" placeholder="Desc.">
-                </div>
+            
+            <div id="area-laser" class="grid-3" style="display:none; margin-bottom:15px;">
+                <input type="number" id="in-l1" placeholder="L1 Carga">
+                <input type="number" id="in-l2" placeholder="L2 Centro">
+                <input type="number" id="in-l3" placeholder="L3 Desc.">
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <input type="number" id="val-draft" placeholder="Draft mmca" step="0.1">
-                <input type="text" id="val-op" placeholder="Operador">
+
+            <div style="margin-bottom:15px;">
+                <input type="number" id="in-draft" placeholder="Lectura Draft (ej. -1.5)" step="0.1">
             </div>
-            <button class="save" onclick="processData()">REGISTRAR DATOS</button>
+
+            <div class="grid-2">
+                <input type="text" id="in-op" placeholder="Operador">
+                <input type="text" id="in-punta" placeholder="Punta (Turno)">
+            </div>
+            
+            <button class="action-btn" onclick="saveRecord()">REGISTRAR LECTURA</button>
         </div>
 
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span style="font-size:0.8rem; font-weight:bold; color:var(--blue);">HISTORIAL DE OPERACIÓN</span>
-                <button onclick="downloadLogs()" style="background:#333; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:0.6rem;">EXPORTAR CSV</button>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold; color:var(--blue); font-size:0.9rem;">BITÁCORA OPERATIVA</span>
+                <button class="secondary-btn" style="width:auto; font-size:0.7rem;" onclick="exportCSV()">EXPORTAR CSV</button>
             </div>
             <table class="log-table">
-                <thead><tr><th>HORA</th><th>Ti</th><th>DRAFT</th><th>OP.</th></tr></thead>
+                <thead><tr><th>Hora</th><th>Op/Punta</th><th>Modo</th><th>Ti</th><th>Draft</th></tr></thead>
                 <tbody id="log-body"></tbody>
             </table>
         </div>
     </div>
 
-    <audio id="beep" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+    <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" preload="auto"></audio>
 
     <script>
-        let currentMode = 'TC';
-        let currentAngle = 0;
+        // VARIABLES GLOBALES Y PERSISTENCIA
+        let mode = 'TC';
+        let currentAngle = parseInt(localStorage.getItem('otm_angle')) || 0;
         let wakeLock = null;
-        let startTime = localStorage.getItem('otm_start_v55') ? parseInt(localStorage.getItem('otm_start_v55')) : Date.now();
-        let logs = JSON.parse(localStorage.getItem('otm_logs_v55')) || [];
-        if(!localStorage.getItem('otm_start_v55')) localStorage.setItem('otm_start_v55', startTime);
+        
+        let startTime = localStorage.getItem('otm_start_v55');
+        if(!startTime) { startTime = Date.now(); localStorage.setItem('otm_start_v55', startTime); }
+        else { startTime = parseInt(startTime); }
 
-        async function requestWakeLock() {
+        let lastTurnTime = localStorage.getItem('otm_last_turn');
+        if(!lastTurnTime) { lastTurnTime = Date.now(); localStorage.setItem('otm_last_turn', lastTurnTime); }
+        else { lastTurnTime = parseInt(lastTurnTime); }
+
+        let logs = JSON.parse(localStorage.getItem('otm_logs_v55')) || [];
+
+        // CONSTANTES FÍSICAS
+        const FACTOR_REFRACTARIO = 3.5;
+        const LIMITE_TEMP = 850;
+        const EFECTO_BANANA_MAX = 80;
+
+        // ESTADOS DE FASE
+        let currentPhaseInfo = {};
+
+        // INICIALIZACIÓN DE UI
+        document.getElementById('compass').style.transform = `rotate(${currentAngle}deg)`;
+        document.getElementById('compass').innerText = `${currentAngle}°`;
+
+        // 1. SEGURIDAD Y WAKELOCK
+        async function enableWakeLock() {
             try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
         }
 
-        // CONTROL DE ACCESO SEGURO (CORREGIDO)
-        function checkLogin() {
-            const pinVal = document.getElementById('pin').value.trim();
-            if(pinVal === '1407') {
+        function verifyPin() {
+            const pin = document.getElementById('pin-input').value.trim();
+            if(pin === '1407') {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'block';
-                requestWakeLock();
-                startSystem();
+                enableWakeLock();
+                renderLogs();
+                setInterval(engineTick, 1000);
+                engineTick(); // Llamada inicial
             } else {
-                alert('PIN INCORRECTO');
-                document.getElementById('pin').value = '';
-                // NO se registra nada en bitácora aquí por seguridad
+                alert('ACCESO DENEGADO: PIN INCORRECTO');
+                document.getElementById('pin-input').value = '';
             }
         }
 
-        function setMode(m) {
-            currentMode = m;
-            document.getElementById('btn-tc').classList.toggle('active', m === 'TC');
-            document.getElementById('btn-laser').classList.toggle('active', m === 'LASER');
-            document.getElementById('input-tc').style.display = m === 'TC' ? 'block' : 'none';
-            document.getElementById('input-laser').style.display = m === 'LASER' ? 'block' : 'none';
+        // 2. INTERFAZ
+        function toggleMode(selected) {
+            mode = selected;
+            document.getElementById('btn-tc').classList.toggle('active', mode === 'TC');
+            document.getElementById('btn-laser').classList.toggle('active', mode === 'LASER');
+            document.getElementById('area-tc').style.display = mode === 'TC' ? 'block' : 'none';
+            document.getElementById('area-laser').style.display = mode === 'LASER' ? 'grid' : 'none';
         }
 
-        function startSystem() {
-            setInterval(updateClock, 1000);
-            renderLogs();
-        }
-
-        function updateClock() {
+        // 3. MOTOR DE TIEMPO Y FASES
+        function engineTick() {
             const now = Date.now();
-            const diff = now - startTime;
-            const h = Math.floor(diff/3600000);
-            const m = Math.floor((diff%3600000)/60000);
-            const s = Math.floor((diff%60000)/1000);
             
-            document.getElementById('timer-display').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            // Cronómetro Global
+            const diffGlobal = now - startTime;
+            const h = Math.floor(diffGlobal / 3600000);
+            const m = Math.floor((diffGlobal % 3600000) / 60000);
+            const s = Math.floor((diffGlobal % 60000) / 1000);
+            document.getElementById('global-timer').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-            let p = 1, g = "120-150°C", t = 60;
-            if(h >= 24 && h < 72) { p = 2; g = "320-350°C"; t = 30; }
-            else if(h >= 72) { p = 3; g = "600-650°C"; t = 15; }
-
-            document.getElementById('phase-text').innerText = `FASE ${p}`;
-            document.getElementById('phase-goal').innerText = `Objetivo: ${g}`;
+            // Determinar Fase
+            let phaseNum = 1, tempGoal = "120-150°C", turnIntervalMins = 60, draftMin = -1.0, draftMax = -2.5;
+            if (h >= 24 && h < 72) { phaseNum = 2; tempGoal = "320-350°C"; turnIntervalMins = 30; draftMin = -1.2; }
+            else if (h >= 72) { phaseNum = 3; tempGoal = "600-650°C"; turnIntervalMins = 15; draftMin = -1.5; }
             
-            let remainingMins = t - (m % t);
-            document.getElementById('turn-countdown').innerText = `PROX: ${remainingMins}m`;
-            if(remainingMins === t && s === 0) document.getElementById('beep').play();
-        }
+            currentPhaseInfo = { min: draftMin, max: draftMax };
 
-        function rotate90() {
-            currentAngle = (currentAngle + 90) % 360;
-            document.getElementById('compass-ui').style.transform = `rotate(${currentAngle}deg)`;
-            document.getElementById('compass-ui').innerText = `${currentAngle}°`;
-        }
+            document.getElementById('phase-title').innerText = `FASE ${phaseNum}`;
+            document.getElementById('phase-temp').innerText = `Rango: ${tempGoal}`;
+            document.getElementById('phase-draft').innerText = `Draft: ${draftMin} a ${draftMax}`;
 
-        function processData() {
-            const op = document.getElementById('val-op').value.trim();
-            const draft = parseFloat(document.getElementById('val-draft').value);
-            if(!op || isNaN(draft)) return alert('DATOS DE OPERADOR O DRAFT INCOMPLETOS');
+            // Cronómetro de Giro
+            const diffTurn = now - lastTurnTime;
+            const turnMinsElapsed = Math.floor(diffTurn / 60000);
+            const turnSecsElapsed = Math.floor((diffTurn % 60000) / 1000);
+            
+            let minsLeft = turnIntervalMins - turnMinsElapsed - 1;
+            let secsLeft = 59 - turnSecsElapsed;
 
-            let ti = 0;
-            if(currentMode === 'TC') {
-                ti = parseFloat(document.getElementById('val-tc').value);
+            if (minsLeft < 0) { minsLeft = 0; secsLeft = 0; } // Evitar negativos si se pasa
+
+            document.getElementById('turn-timer').innerText = `${String(minsLeft).padStart(2,'0')}:${String(secsLeft).padStart(2,'0')}`;
+
+            // Alarma de Giro
+            if (minsLeft === 0 && secsLeft === 0) {
+                document.getElementById('turn-timer').style.color = "var(--red)";
+                document.getElementById('alarm-sound').play().catch(()=>{});
+                if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
             } else {
-                const c1 = parseFloat(document.getElementById('l1').value);
-                const c2 = parseFloat(document.getElementById('l2').value);
-                const c3 = parseFloat(document.getElementById('l3').value);
-                if(Math.abs(c1 - c3) > 80) document.getElementById('alert-msg').innerText = "⚠️ ALERTA: EFECTO BANANA (>80°C Δ)";
-                else document.getElementById('alert-msg').innerText = "";
-                ti = ((c1 + c2 + c3) / 3) * 3.5;
+                document.getElementById('turn-timer').style.color = "var(--green)";
             }
-
-            if(isNaN(ti) || ti <= 0) return alert('VALOR DE TEMPERATURA NO VÁLIDO');
-
-            // Actualizar Interfaz
-            document.getElementById('ti-val').innerText = `${ti.toFixed(1)}°C`;
-            document.getElementById('draft-icon').innerText = draft > -1.0 ? "⚠️" : "✓";
-            document.getElementById('draft-advice').innerText = draft > -1.0 ? "ABRIR DÁMPER" : "TIRO ÓPTIMO";
-            document.getElementById('draft-advice').style.color = draft > -1.0 ? "var(--red)" : "var(--blue)";
-
-            // Guardar en Bitácora
-            logs.unshift({ h: new Date().toLocaleTimeString(), ti: ti.toFixed(1), dr: draft, op: op });
-            localStorage.setItem('otm_logs_v55', JSON.stringify(logs));
-            renderLogs();
         }
 
-        function renderLogs() {
-            const container = document.getElementById('log-body');
-            container.innerHTML = logs.slice(0,10).map(l => `
-                <tr><td>${l.h}</td><td>${l.ti}°</td><td>${l.dr}</td><td>${l.op}</td></tr>
-            `).join('');
+        function markTurn() {
+            currentAngle = (currentAngle + 90) % 360;
+            localStorage.setItem('otm_angle', currentAngle);
+            document.getElementById('compass').style.transform = `rotate(${currentAngle}deg)`;
+            document.getElementById('compass').innerText = `${currentAngle}°`;
+            
+            lastTurnTime = Date.now();
+            localStorage.setItem('otm_last_turn', lastTurnTime);
+            engineTick(); // Forzar actualización visual
         }
 
-        function downloadLogs() {
-            let csv = "HORA,Ti,DRAFT,OPERADOR\n";
-            logs.forEach(l => csv += `${l.h},${l.ti},${l.dr},${l.op}\n`);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'REPORTE_OTM_120H.csv'; a.click();
-        }
-    </script>
-</body>
-</html>
+        // 4. PROCESAMIENTO DE DATOS
+        function saveRecord() {
+            const op = document.getElementById('in-op').value.trim();
+            const punta = document.getElementById('in-punta').value.trim();
