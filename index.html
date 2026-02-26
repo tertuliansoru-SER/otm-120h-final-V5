@@ -3,589 +3,729 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTM 120H V5.5 - Sistema de Monitoreo Industrial</title>
+    <title>OTM 120H - Sistema de Control Maestro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@500;800&display=swap');
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; }
+        .glow-text-orange { text-shadow: 0 0 10px rgba(249, 115, 22, 0.5); }
+        .glow-text-blue { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        .compass-ring { border-radius: 50%; border: 4px dashed #475569; position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; transition: all 0.5s ease; }
+        .compass-marker { position: absolute; width: 12px; height: 12px; background: #f97316; border-radius: 50%; top: -8px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px #f97316; }
+        input[type="number"], input[type="text"], select { background: #1e293b; border: 1px solid #475569; color: white; border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; }
+        input:focus, select:focus { border-color: #f97316; box-shadow: 0 0 0 1px #f97316; }
         
-        :root {
-            --fuego: #f97316;
-            --gases: #3b82f6;
-            --bg: #050505;
-            --panel: #111111;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: #f8fafc;
-            font-family: 'Inter', sans-serif;
-            overflow-x: hidden;
-        }
-
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        
-        .panel-industrial {
-            background: var(--panel);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .ti-display {
-            font-size: 10rem;
-            line-height: 1;
-            font-weight: 900;
-            color: var(--fuego);
-            text-shadow: 0 0 30px rgba(249, 115, 22, 0.3);
-        }
-
-        .brújula-giro {
-            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .bg-fuego { background-color: var(--fuego); }
-        .bg-gases { background-color: var(--gases); }
-
-        /* Estilos para ocultar flechas de inputs */
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
-            -webkit-appearance: none; margin: 0;
-        }
-
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #000; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-
-        #lock-screen {
-            background: radial-gradient(circle, #111 0%, #000 100%);
-        }
+        /* Ocultar flechas de los inputs number */
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
     </style>
 </head>
-<body class="p-4 lg:p-6">
+<body class="h-screen flex flex-col overflow-hidden relative selection:bg-orange-500 selection:text-white">
 
-    <!-- PANTALLA DE BLOQUEO (SEGURIDAD PIN 1407) -->
-    <div id="lock-screen" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div class="panel-industrial p-10 rounded-[3rem] text-center max-w-sm w-full border border-white/10">
-            <h2 class="text-xl font-black uppercase tracking-widest mb-6">Seguridad OTM</h2>
-            <input type="password" id="pin-input" placeholder="****" maxlength="4" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-center text-5xl font-black text-fuego outline-none mb-6 tracking-[0.5em]">
-            <button onclick="checkPIN()" class="w-full bg-orange-600 hover:bg-orange-500 py-4 rounded-2xl font-black uppercase tracking-widest transition-all">Desbloquear</button>
-            <p class="mt-6 text-[10px] text-zinc-600 uppercase font-bold tracking-tighter">Acceso restringido a personal de ingeniería</p>
+    <!-- PANTALLA DE BLOQUEO -->
+    <div id="loginScreen" class="absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500">
+        <i data-lucide="shield-alert" class="w-20 h-20 text-orange-500 mb-6 animate-pulse"></i>
+        <h1 class="text-3xl font-bold tracking-widest mb-2">OTM 120H <span class="text-orange-500">V5+</span></h1>
+        <p class="text-slate-400 mb-8">SISTEMA DE CONTROL MAESTRO</p>
+        <div class="glass-panel p-8 rounded-xl text-center w-80">
+            <label class="block text-sm font-semibold text-slate-300 mb-4">INGRESE PIN DE ACCESO</label>
+            <input type="password" id="pinInput" class="text-center text-2xl tracking-widest mb-4" maxlength="4" placeholder="••••">
+            <button onclick="checkPIN()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded transition-colors">DESBLOQUEAR</button>
+            <p id="pinError" class="text-red-400 text-sm mt-2 hidden">PIN Incorrecto</p>
         </div>
     </div>
 
-    <!-- APP PRINCIPAL -->
-    <div id="app-main" class="hidden max-w-[1600px] mx-auto space-y-6">
+    <!-- CABECERA -->
+    <header class="glass-panel px-6 py-3 flex justify-between items-center z-10">
+        <div class="flex items-center gap-3">
+            <i data-lucide="flame" class="text-orange-500 w-8 h-8"></i>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider">OTM 120H</h1>
+                <div class="flex items-center gap-2 text-xs text-green-400">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span id="connStatus">Storage Local Activo y Seguro</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-4 items-center">
+            <div>
+                <input type="text" id="opName" placeholder="Nombre del Operador" class="text-sm w-48">
+            </div>
+            <div>
+                <select id="opShift" class="text-sm w-32">
+                    <option value="">Turno...</option>
+                    <option value="A">Punta A (Mañana)</option>
+                    <option value="B">Punta B (Tarde)</option>
+                    <option value="C">Punta C (Noche)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 p-4 z-10">
         
-        <!-- HEADER INDUSTRIAL -->
-        <header class="panel-industrial p-6 rounded-[2.5rem] flex flex-wrap items-center justify-between gap-6">
-            <div class="flex items-center gap-5">
-                <div class="bg-fuego p-4 rounded-3xl shadow-lg">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <!-- COLUMNA IZQUIERDA: Relojes y Fases -->
+        <div class="w-full md:w-1/4 flex flex-col gap-4">
+            <!-- Global Timer -->
+            <div class="glass-panel rounded-xl p-5 flex flex-col items-center">
+                <h2 class="text-slate-400 text-sm font-bold tracking-widest mb-2 uppercase">Tiempo Global de Curado</h2>
+                <div id="globalTimer" class="text-4xl font-mono font-bold glow-text-orange mb-4">000:00:00</div>
+                <div class="flex gap-2 w-full">
+                    <button id="btnToggleTimer" onclick="toggleGlobalTimer()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded font-semibold flex justify-center items-center gap-2 transition">
+                        <i data-lucide="play" id="iconTimer" class="w-4 h-4"></i> <span id="textTimer">Iniciar</span>
+                    </button>
+                    <button onclick="resetGlobalTimer()" class="bg-red-900 hover:bg-red-800 text-red-200 py-2 px-3 rounded transition" title="Reiniciar Curado">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
                 </div>
-                <div>
-                    <h1 class="text-2xl font-black italic tracking-tighter uppercase">OTM 120H <span class="text-fuego">V5.5</span></h1>
-                    <div class="flex gap-4 mt-2">
-                        <input type="text" id="op_name" placeholder="OPERADOR" class="bg-transparent border-b border-zinc-800 text-[10px] font-black uppercase outline-none focus:border-fuego w-32 pb-1">
-                        <input type="text" id="op_punta" placeholder="PUNTA" class="bg-transparent border-b border-zinc-800 text-[10px] font-black uppercase outline-none focus:border-fuego w-24 pb-1">
+            </div>
+
+            <!-- Brújula de Fase -->
+            <div class="glass-panel rounded-xl p-5 flex-1 border-t-4 border-orange-500">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-slate-400 text-sm font-bold tracking-widest uppercase">Brújula de Fase</h2>
+                    <span id="phaseBadge" class="bg-orange-500 text-white text-xs px-2 py-1 rounded font-bold">FASE 1</span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-xs text-slate-500 block">Objetivo Térmico</span>
+                        <div class="text-xl font-bold text-orange-400"><span id="targetTemp">120-150</span> °C</div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-500 block">Draft Ideal (mmca)</span>
+                        <div class="text-xl font-bold text-blue-400"><span id="targetDraft">-1.0 a -2.5</span></div>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-500 block">Frecuencia de Giro</span>
+                        <div class="text-xl font-bold text-slate-200">Cada <span id="targetTurn">60</span> min</div>
                     </div>
                 </div>
             </div>
-
-            <div class="flex items-center gap-8">
-                <div class="text-right">
-                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Reloj Maestro Curado</p>
-                    <div id="master-clock" class="text-4xl font-black mono text-white tracking-tighter">000:00:00</div>
-                </div>
-                <div class="flex items-center gap-2 px-4 py-2 bg-black rounded-2xl border border-white/5">
-                    <div id="sync-dot" class="status-dot bg-emerald-500"></div>
-                    <span id="sync-text" class="text-[9px] font-black text-emerald-500 uppercase">Sincronizado</span>
-                </div>
-                <button id="btn-master" onclick="toggleClock()" class="bg-gases px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-80 transition-all">Iniciar</button>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <!-- PANEL IZQUIERDO: BRÚJULAS Y FASES -->
-            <div class="lg:col-span-3 space-y-6">
-                <!-- BRÚJULA DE FASE ACTUAL -->
-                <section class="panel-industrial p-6 rounded-[2.5rem] border-l-8 border-fuego space-y-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 id="phase-label" class="text-fuego text-xs font-black uppercase tracking-widest italic">Brújula de Fase 1</h2>
-                        <span id="freq-indicator" class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black">🟢 NORMAL</span>
-                    </div>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
-                            <span class="text-[9px] font-bold text-zinc-500 uppercase">Temp Meta</span>
-                            <span id="target-temp" class="text-xs font-black text-white">120 - 150°C</span>
-                        </div>
-                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
-                            <span class="text-[9px] font-bold text-zinc-500 uppercase">Draft Ideal</span>
-                            <span id="target-draft" class="text-xs font-black text-gases">-1.0 / -2.5</span>
-                        </div>
-                        <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5">
-                            <span class="text-[9px] font-bold text-zinc-500 uppercase">Frecuencia</span>
-                            <span id="target-freq" class="text-xs font-black text-white">30 min</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- BRÚJULA DE GIRO -->
-                <section id="rotation-card" class="panel-industrial p-8 rounded-[2.5rem] text-center relative overflow-hidden">
-                    <p class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-6">Posición del Horno (90°)</p>
-                    <div class="relative w-36 h-36 mx-auto bg-black rounded-full border-4 border-zinc-900 flex items-center justify-center">
-                        <div id="compass-dial" class="absolute inset-0 brújula-giro flex items-center justify-center">
-                            <div class="w-1 h-16 bg-gradient-to-t from-fuego to-transparent rounded-full relative">
-                                <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-4 h-4 bg-fuego rounded-full border-4 border-black"></div>
-                            </div>
-                        </div>
-                        <div class="text-[9px] font-black text-zinc-800 absolute top-2">NORTE</div>
-                        <div id="giro-text" class="text-xl font-black mono text-zinc-400 z-10">0°</div>
-                    </div>
-                    <div id="rotation-timer" class="text-4xl font-black mono text-gases mt-6">60:00</div>
-                    <button onclick="confirmRotation()" class="w-full mt-6 bg-white/5 hover:bg-white/10 border border-white/10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Confirmar Giro</button>
-                </section>
-            </div>
-
-            <!-- PANEL CENTRAL: MONITOR Y MEDICIÓN -->
-            <div class="lg:col-span-6 space-y-6">
-                <!-- MONITOR DOMINANTE -->
-                <section class="panel-industrial p-10 rounded-[3.5rem] text-center border-t-8 border-fuego relative">
-                    <p class="text-[11px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-4 italic">Temperatura Interna Proyectada ($T_i$)</p>
-                    <div id="main-ti" class="ti-display tracking-tighter">0<span class="text-4xl ml-2 font-black text-zinc-800 italic">°C</span></div>
-                    
-                    <div class="flex justify-center gap-4 mt-8">
-                        <div id="mode-badge" class="px-4 py-1.5 bg-fuego text-white text-[10px] font-black rounded-full uppercase">Modo: Termocupla</div>
-                        <div id="ratio-badge" class="px-4 py-1.5 bg-zinc-900 border border-white/10 text-fuego text-[10px] font-black rounded-full mono italic">Relación: 3.50x</div>
-                    </div>
-                </section>
-
-                <!-- ENTRADA DINÁMICA -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <section class="panel-industrial p-8 rounded-[2.5rem]">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-xs font-black text-zinc-500 uppercase tracking-widest">Captura Térmica</h3>
-                            <button onclick="switchMode()" class="text-[9px] font-black bg-zinc-800 hover:bg-zinc-700 px-3 py-1 rounded-lg transition-all uppercase">Cambiar Sensor</button>
-                        </div>
-                        <div id="inputs-box" class="space-y-4">
-                            <!-- Inyección dinámica JS -->
-                        </div>
-                    </section>
-
-                    <section class="panel-industrial p-8 rounded-[2.5rem] flex flex-col justify-between border-l-4 border-gases">
-                        <div>
-                            <h3 class="text-xs font-black text-gases uppercase tracking-widest mb-6 italic">Dinámica de Gases</h3>
-                            <div class="bg-black p-6 rounded-3xl text-center border border-white/5">
-                                <label class="text-[10px] font-black text-gases uppercase block mb-4">Pitot (mmca)</label>
-                                <input type="number" id="in-draft" step="0.1" class="bg-transparent text-6xl font-black text-white w-full text-center outline-none mono" placeholder="0.0" oninput="process()">
-                            </div>
-                        </div>
-                        <button onclick="saveRecord()" class="w-full mt-6 bg-fuego py-6 rounded-3xl font-black uppercase text-sm tracking-[0.2em] shadow-2xl hover:brightness-110 active:scale-95 transition-all">
-                            Grabar Punto de Control
-                        </button>
-                    </section>
+            <!-- Brújula de Giro -->
+            <div class="glass-panel rounded-xl p-5 flex flex-col items-center justify-center relative">
+                <h2 class="text-slate-400 text-sm font-bold tracking-widest mb-4 uppercase">Posición Horno</h2>
+                <div class="compass-ring" id="compassRing">
+                    <div class="compass-marker"></div>
+                    <span id="turnDeg" class="text-3xl font-bold">0°</span>
                 </div>
-
-                <!-- ALERTAS IA MONITOR -->
-                <section class="panel-industrial p-6 rounded-[2.5rem] border border-blue-500/20 bg-blue-500/5">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-2 h-2 bg-gases rounded-full animate-ping"></div>
-                        <span class="text-[10px] font-black text-gases uppercase tracking-widest">IA Monitor: Análisis de Seguridad</span>
-                    </div>
-                    <div id="ia-console" class="text-xs font-bold text-zinc-400 italic space-y-2">
-                        Esperando sincronización de datos operativos...
-                    </div>
-                </section>
-            </div>
-
-            <!-- PANEL DERECHO: BITÁCORA -->
-            <div class="lg:col-span-3">
-                <section class="panel-industrial h-full rounded-[2.5rem] flex flex-col overflow-hidden">
-                    <div class="p-5 border-b border-white/5 bg-white/5 flex justify-between items-center">
-                        <span class="text-[10px] font-black text-zinc-500 uppercase italic">Bitácora Técnica</span>
-                        <button onclick="exportCSV()" class="text-[9px] font-bold text-gases hover:underline">EXPORTAR CSV</button>
-                    </div>
-                    <div id="log-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scroll font-mono text-[9px]">
-                        <!-- Entradas de bitácora -->
-                    </div>
-                </section>
+                <div class="mt-4 text-center">
+                    <div class="text-xs text-slate-500">Próximo giro en:</div>
+                    <div id="turnTimer" class="text-2xl font-mono text-yellow-400 font-bold">00:00</div>
+                </div>
+                <button onclick="resetTurn()" class="mt-3 bg-slate-700 hover:bg-slate-600 text-sm py-1 px-4 rounded-full transition w-full">Girar y Reiniciar</button>
             </div>
         </div>
-    </div>
 
-    <!-- AUDIO BEEP (GENERADO POR SINTESIS) -->
-    <script>
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function beep() {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.type = "sine";
-            osc.frequency.value = 880;
-            gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.5);
-        }
-    </script>
+        <!-- COLUMNA CENTRAL: Monitoreo Térmico -->
+        <div class="w-full md:w-2/4 flex flex-col gap-4">
+            <!-- Display Principal -->
+            <div class="glass-panel rounded-xl p-8 flex flex-col items-center justify-center flex-1 relative overflow-hidden">
+                <div class="absolute top-4 left-4 text-slate-400 text-sm font-bold uppercase tracking-widest">Temperatura Interna <span id="tiType" class="text-orange-500 text-xs">(Calculada)</span></div>
+                
+                <!-- Massive central display -->
+                <div class="text-[8rem] leading-none font-bold text-white glow-text-orange tabular-nums tracking-tighter" id="displayTi">
+                    ---
+                </div>
+                <span class="text-3xl text-slate-400 mt-2">°C</span>
+                
+                <div class="absolute bottom-4 right-4 flex items-center gap-2">
+                    <i data-lucide="wind" class="text-blue-400"></i>
+                    <span class="text-2xl font-bold text-blue-400 glow-text-blue" id="displayDraft">--</span>
+                    <span class="text-slate-400">mmca</span>
+                </div>
+            </div>
 
-    <script>
-        // --- CONSTANTES DE INGENIERÍA ---
-        const PIN_ACCESO = "1407";
-        const RATIO = 3.5;
-        const LIMITE_BANANA_WARN = 80;
-        const LIMITE_BANANA_CRIT = 120;
-        const LIMITE_SALTO = 40; // °C en 10 min
-
-        // --- ESTADO DEL SISTEMA ---
-        let state = {
-            active: false,
-            mode: 'TC', // 'TC' o 'LASER'
-            seconds: parseInt(localStorage.getItem('otm_55_sec')) || 0,
-            phase: 1,
-            rotSeconds: 0,
-            giroDeg: 0,
-            freqMode: 'NORMAL', // 'NORMAL' o 'INTENSIVE'
-            stableCount: 0,
-            lastSaveTime: 0,
-            lastTi: 0,
-            logs: JSON.parse(localStorage.getItem('otm_55_logs')) || []
-        };
-
-        const FASES = {
-            1: { name: "Fase 1: Deshidratación", h: 24, temp: [120, 150], draft: [-1.0, -2.5], rot: 60, freq: 30 },
-            2: { name: "Fase 2: Calentamiento", h: 72, temp: [320, 350], draft: [-1.2, -2.5], rot: 30, freq: 30 },
-            3: { name: "Fase 3: Curado Final", h: 120, temp: [600, 650], draft: [-1.5, -2.5], rot: 15, freq: 30 }
-        };
-
-        // --- SEGURIDAD ---
-        function checkPIN() {
-            const input = document.getElementById('pin-input').value;
-            if (input === PIN_ACCESO) {
-                document.getElementById('lock-screen').style.display = 'none';
-                document.getElementById('app-main').style.display = 'block';
-                init();
-            } else {
-                state.logs.unshift({h: 'SECURITY', op: 'FAIL', ti: 'PIN', mode: 'ALERT', draft: '0'});
-                saveToLocal();
-                alert("Acceso Denegado. Intento registrado.");
-            }
-        }
-
-        function init() {
-            document.getElementById('op_name').value = localStorage.getItem('otm_55_op') || '';
-            document.getElementById('op_punta').value = localStorage.getItem('otm_55_punta') || '';
-            renderInputs();
-            renderLogs();
-            setInterval(tick, 1000);
-        }
-
-        // --- MOTOR DE TIEMPO ---
-        function toggleClock() {
-            state.active = !state.active;
-            const btn = document.getElementById('btn-master');
-            btn.innerText = state.active ? "Pausar" : "Reanudar";
-            btn.className = state.active ? "bg-red-600 px-6 py-3 rounded-2xl font-black text-xs uppercase" : "bg-gases px-6 py-3 rounded-2xl font-black text-xs uppercase";
-        }
-
-        function tick() {
-            if (!state.active) return;
-
-            state.seconds++;
-            saveToLocal();
-
-            // Lógica de Fases
-            const hours = state.seconds / 3600;
-            let p = 1;
-            if (hours >= 24) p = 2;
-            if (hours >= 72) p = 3;
-            if (p !== state.phase) {
-                state.phase = p;
-                confirmRotation(); // Reset rotación al cambiar fase
-            }
-
-            // Lógica de Giro
-            if (state.rotSeconds > 0) {
-                state.rotSeconds--;
-            } else {
-                document.getElementById('rotation-card').classList.add('alert-active');
-                if (state.seconds % 60 === 0) beep();
-            }
-
-            updateUI();
-            process();
-        }
-
-        // --- UI & INTERACCIÓN ---
-        function updateUI() {
-            const h = Math.floor(state.seconds / 3600).toString().padStart(3, '0');
-            const m = Math.floor((state.seconds % 3600) / 60).toString().padStart(2, '0');
-            const s = (state.seconds % 60).toString().padStart(2, '0');
-            document.getElementById('master-clock').innerText = `${h}:${m}:${s}`;
-
-            const f = FASES[state.phase];
-            document.getElementById('phase-label').innerText = `Brújula de ${f.name}`;
-            document.getElementById('target-temp').innerText = `${f.temp[0]} - ${f.temp[1]}°C`;
-            document.getElementById('target-draft').innerText = `${f.draft[0].toFixed(1)} / ${f.draft[1].toFixed(1)}`;
-            
-            // Frecuencia Inteligente UI
-            const freqVal = (state.phase === 1 && hours() < 6) ? 15 : f.freq;
-            document.getElementById('target-freq').innerText = state.freqMode === 'INTENSIVE' ? '15 min (Intensivo)' : `${freqVal} min`;
-            
-            const freqInd = document.getElementById('freq-indicator');
-            if (state.freqMode === 'INTENSIVE') {
-                freqInd.innerText = "🟡 INTENSIVO";
-                freqInd.className = "px-2 py-1 rounded bg-orange-500/10 text-orange-500 text-[9px] font-black";
-            } else {
-                freqInd.innerText = "🟢 NORMAL";
-                freqInd.className = "px-2 py-1 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black";
-            }
-
-            const rm = Math.floor(state.rotSeconds / 60).toString().padStart(2, '0');
-            const rs = (state.rotSeconds % 60).toString().padStart(2, '0');
-            document.getElementById('rotation-timer').innerText = `${rm}:${rs}`;
-        }
-
-        function renderInputs() {
-            const box = document.getElementById('inputs-box');
-            if (state.mode === 'TC') {
-                box.innerHTML = `
-                    <div class="bg-black/50 p-6 rounded-2xl border border-white/5 shadow-inner">
-                        <label class="text-[9px] font-black text-zinc-600 uppercase block mb-2 tracking-widest">Termocupla Directa (Ti)</label>
-                        <input type="number" id="in-tc" class="w-full bg-transparent text-5xl font-black text-fuego outline-none mono" placeholder="000" oninput="process()">
-                    </div>`;
-            } else {
-                box.innerHTML = `
-                    <div class="grid grid-cols-3 gap-3 mb-4">
-                        <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L1 Carga</span><input type="number" id="l1" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
-                        <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L2 Centro</span><input type="number" id="l2" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
-                        <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L3 Desc.</span><input type="number" id="l3" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
+            <!-- Panel de Controles / Inputs -->
+            <div class="glass-panel rounded-xl p-5">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                    <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm">Ingreso de Datos</h2>
+                    <div class="flex bg-slate-800 rounded-lg p-1">
+                        <button id="btnModeTC" onclick="setMode('TC')" class="px-4 py-1 rounded-md text-sm font-bold bg-orange-600 text-white transition">TERMOCUPLA</button>
+                        <button id="btnModeLaser" onclick="setMode('LASER')" class="px-4 py-1 rounded-md text-sm font-bold text-slate-400 hover:text-white transition">PISTOLA (Láser)</button>
                     </div>
-                    <div class="flex justify-between items-center px-4 py-2 bg-fuego/5 rounded-xl border border-fuego/10">
-                        <span class="text-[9px] font-black text-fuego uppercase tracking-widest">Promedio Casco (Te)</span>
-                        <span id="te-avg" class="text-xl font-black mono text-fuego">0.0°C</span>
-                    </div>`;
+                </div>
+
+                <div class="grid grid-cols-4 gap-4">
+                    <!-- Inputs Laser (Hidden by default) -->
+                    <div id="laserInputs" class="col-span-3 grid grid-cols-3 gap-2 hidden">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">L1: Carga (°C)</label>
+                            <input type="number" id="inpL1" placeholder="Ext. Carga" oninput="calculateTi()">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">L2: Centro (°C)</label>
+                            <input type="number" id="inpL2" placeholder="Ext. Centro" oninput="calculateTi()">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">L3: Descarga (°C)</label>
+                            <input type="number" id="inpL3" placeholder="Ext. Desc." oninput="calculateTi()">
+                        </div>
+                    </div>
+                    
+                    <!-- Input TC -->
+                    <div id="tcInput" class="col-span-3">
+                        <label class="block text-xs text-orange-400 font-bold mb-1">Temperatura Interna Real (°C)</label>
+                        <input type="number" id="inpTC" placeholder="Lectura Termocupla" class="text-lg" oninput="calculateTi()">
+                    </div>
+
+                    <!-- Draft General -->
+                    <div class="col-span-1 border-l border-slate-700 pl-4">
+                        <label class="block text-xs text-blue-400 font-bold mb-1">Draft (mmca)</label>
+                        <input type="number" id="inpDraft" placeholder="-1.5" step="0.1" oninput="updateDraftDisplay()">
+                    </div>
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <button onclick="registrarDato()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 transition shadow-lg shadow-green-900/50">
+                        <i data-lucide="save" class="w-5 h-5"></i> REGISTRAR LECTURA
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: IA Monitor y Alertas -->
+        <div class="w-full md:w-1/4 flex flex-col gap-4">
+            <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col">
+                <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+                    <i data-lucide="cpu" class="text-purple-400"></i>
+                    <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm">IA Monitor / Diagnóstico</h2>
+                </div>
+                
+                <div id="alertsPanel" class="flex-1 space-y-3 overflow-y-auto pr-2">
+                    <!-- Alertas se generan dinamicamente aqui -->
+                    <div class="p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 text-center italic">
+                        Esperando datos para diagnóstico...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- BITÁCORA INFERIOR -->
+    <footer class="h-48 glass-panel border-t border-slate-700 flex flex-col z-10">
+        <div class="flex justify-between items-center px-4 py-2 border-b border-slate-700 bg-slate-800/50">
+            <h3 class="text-sm font-bold text-slate-300 tracking-wider">BITÁCORA DE CONTROL</h3>
+            <button onclick="exportCSV()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded flex items-center gap-1 transition">
+                <i data-lucide="download" class="w-3 h-3"></i> Exportar CSV
+            </button>
+        </div>
+        <div class="flex-1 overflow-auto p-0">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs text-slate-400 uppercase bg-slate-800 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-2">Hora</th>
+                        <th class="px-4 py-2">Operador</th>
+                        <th class="px-4 py-2 text-orange-400">T. Interna (°C)</th>
+                        <th class="px-4 py-2">Origen</th>
+                        <th class="px-4 py-2 text-blue-400">Draft</th>
+                        <th class="px-4 py-2">Fase/Posición</th>
+                        <th class="px-4 py-2">Diagnóstico Guardado</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody" class="divide-y divide-slate-700">
+                    <!-- Registros de la bitacora -->
+                </tbody>
+            </table>
+        </div>
+    </footer>
+
+    <script>
+        // CONFIGURACIÓN MAESTRA
+        const CONST_PIN = "1407";
+        const REFRACTORY_RATIO = 3.5;
+        const ROTATION_ANGLES = [0, 90, 180, 270];
+        
+        // ESTADO GLOBAL
+        let state = {
+            globalSeconds: 0,
+            turnSeconds: 3600, // Inicializado para fase 1 (60 min)
+            currentAngleIndex: 0,
+            isRunning: false,
+            mode: 'TC', // 'TC' o 'LASER'
+            logs: [],
+            currentTi: null,
+            currentDraft: null
+        };
+
+        // FASES CONFIG
+        const PHASES = [
+            { id: 1, name: "FASE 1", maxSecs: 24*3600, tempMin: 120, tempMax: 150, turnMins: 60, draftMin: -1.0, draftMax: -2.5 },
+            { id: 2, name: "FASE 2", maxSecs: 72*3600, tempMin: 320, tempMax: 350, turnMins: 30, draftMin: -1.2, draftMax: -2.5 },
+            { id: 3, name: "FASE 3", maxSecs: 120*3600, tempMin: 600, tempMax: 650, turnMins: 15, draftMin: -1.5, draftMax: -2.5 }
+        ];
+
+        let timerInterval = null;
+
+        // INICIALIZACIÓN
+        function init() {
+            lucide.createIcons();
+            loadState();
+            updateUI();
+            renderLogs();
+            if (state.isRunning) startTimerInterval();
+        }
+
+        // --- SEGURIDAD Y AUTH ---
+        function checkPIN() {
+            const pin = document.getElementById('pinInput').value;
+            if (pin === CONST_PIN) {
+                document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
+            } else {
+                const err = document.getElementById('pinError');
+                err.classList.remove('hidden');
+                setTimeout(() => err.classList.add('hidden'), 2000);
+                document.getElementById('pinInput').value = '';
             }
         }
 
-        function switchMode() {
-            state.mode = state.mode === 'TC' ? 'Laser' : 'TC';
-            document.getElementById('mode-badge').innerText = `Modo: ${state.mode === 'TC' ? 'Termocupla' : 'Pistola Láser'}`;
-            renderInputs();
-            process();
+        // Permitir Enter en el PIN
+        document.getElementById('pinInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') checkPIN();
+        });
+
+        function verifySupervisor() {
+            return prompt("Ingrese PIN de supervisor para autorizar esta acción:") === CONST_PIN;
         }
 
-        // --- PROCESAMIENTO TÉRMICO ---
-        function process() {
-            const inTc = document.getElementById('in-tc')?.value || 0;
-            const l1 = parseFloat(document.getElementById('l1')?.value) || 0;
-            const l2 = parseFloat(document.getElementById('l2')?.value) || 0;
-            const l3 = parseFloat(document.getElementById('l3')?.value) || 0;
-            const draft = document.getElementById('in-draft').value === "" ? null : parseFloat(document.getElementById('in-draft').value);
+        // --- PERSISTENCIA (LOCALSTORAGE) ---
+        function saveState() {
+            localStorage.setItem('otm120h_state', JSON.stringify(state));
+        }
 
-            let ti = 0;
-            let te = 0;
-            let deltaAxial = 0;
+        function loadState() {
+            const saved = localStorage.getItem('otm120h_state');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                } catch(e) { console.error("Error cargando estado", e); }
+            }
+        }
+
+        // --- LÓGICA DE TIEMPOS Y FASES ---
+        function toggleGlobalTimer() {
+            state.isRunning = !state.isRunning;
+            if (state.isRunning) {
+                startTimerInterval();
+            } else {
+                clearInterval(timerInterval);
+            }
+            saveState();
+            updateTimerControls();
+        }
+
+        function startTimerInterval() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                state.globalSeconds++;
+                if (state.turnSeconds > 0) {
+                    state.turnSeconds--;
+                } else if(state.turnSeconds === 0) {
+                    triggerTurnAlarm();
+                    state.turnSeconds = -1; // Evitar multiples alarmas
+                }
+                saveState(); // Auto-save cada segundo
+                updateTimeDisplay();
+            }, 1000);
+            updateTimerControls();
+        }
+
+        function resetGlobalTimer() {
+            if (!verifySupervisor()) {
+                alert("PIN Incorrecto. Acción cancelada.");
+                return;
+            }
+            if (confirm("¡ADVERTENCIA CRÍTICA! ¿Está seguro de reiniciar todo el cronograma de 120 horas?")) {
+                state.globalSeconds = 0;
+                state.isRunning = false;
+                state.currentAngleIndex = 0;
+                clearInterval(timerInterval);
+                const phase = getCurrentPhase();
+                state.turnSeconds = phase.turnMins * 60;
+                saveState();
+                updateUI();
+            }
+        }
+
+        function getCurrentPhase() {
+            if (state.globalSeconds < PHASES[0].maxSecs) return PHASES[0];
+            if (state.globalSeconds < PHASES[1].maxSecs) return PHASES[1];
+            return PHASES[2]; // O finalizado si > 120h
+        }
+
+        // --- AUDIO Y ALARMAS ---
+        function triggerTurnAlarm() {
+            // Beep usando AudioContext nativo (No requiere archivos externos)
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // Nota La
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+            
+            gain.gain.setValueAtTime(1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.5);
+
+            // Alerta visual
+            const compass = document.getElementById('compassRing');
+            compass.style.borderColor = '#ef4444'; // Rojo
+            compass.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+        }
+
+        function resetTurn() {
+            state.currentAngleIndex = (state.currentAngleIndex + 1) % ROTATION_ANGLES.length;
+            const phase = getCurrentPhase();
+            state.turnSeconds = phase.turnMins * 60;
+            saveState();
+            
+            // Reset visuales alarma
+            const compass = document.getElementById('compassRing');
+            compass.style.borderColor = '#475569';
+            compass.style.boxShadow = 'none';
+            
+            updateCompassVisuals();
+            updateTimeDisplay();
+        }
+
+        // --- ACTUALIZACIÓN DE UI ---
+        function updateTimeDisplay() {
+            // Global
+            const h = Math.floor(state.globalSeconds / 3600);
+            const m = Math.floor((state.globalSeconds % 3600) / 60);
+            const s = state.globalSeconds % 60;
+            document.getElementById('globalTimer').innerText = 
+                `${h.toString().padStart(3, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+            // Turn
+            if(state.turnSeconds >= 0) {
+                const tm = Math.floor(state.turnSeconds / 60);
+                const ts = state.turnSeconds % 60;
+                document.getElementById('turnTimer').innerText = 
+                    `${tm.toString().padStart(2, '0')}:${ts.toString().padStart(2, '0')}`;
+                document.getElementById('turnTimer').classList.replace('text-red-500', 'text-yellow-400');
+            } else {
+                document.getElementById('turnTimer').innerText = "¡GIRAR AHORA!";
+                document.getElementById('turnTimer').classList.replace('text-yellow-400', 'text-red-500');
+            }
+
+            updatePhaseInfo();
+        }
+
+        function updateTimerControls() {
+            const btn = document.getElementById('btnToggleTimer');
+            const icon = document.getElementById('iconTimer');
+            const text = document.getElementById('textTimer');
+            if (state.isRunning) {
+                btn.classList.replace('bg-slate-700', 'bg-orange-600');
+                btn.classList.replace('hover:bg-slate-600', 'hover:bg-orange-500');
+                icon.setAttribute('data-lucide', 'pause');
+                text.innerText = "Pausar";
+            } else {
+                btn.classList.replace('bg-orange-600', 'bg-slate-700');
+                btn.classList.replace('hover:bg-orange-500', 'hover:bg-slate-600');
+                icon.setAttribute('data-lucide', 'play');
+                text.innerText = "Reanudar";
+            }
+            lucide.createIcons();
+        }
+
+        function updatePhaseInfo() {
+            const phase = getCurrentPhase();
+            document.getElementById('phaseBadge').innerText = phase.name;
+            document.getElementById('targetTemp').innerText = `${phase.tempMin}-${phase.tempMax}`;
+            document.getElementById('targetDraft').innerText = `${phase.draftMin} a ${phase.draftMax}`;
+            document.getElementById('targetTurn').innerText = phase.turnMins;
+        }
+
+        function updateCompassVisuals() {
+            const deg = ROTATION_ANGLES[state.currentAngleIndex];
+            document.getElementById('turnDeg').innerText = `${deg}°`;
+            document.getElementById('compassRing').style.transform = `rotate(${deg}deg)`;
+            // Compensar la rotación en el texto para que siempre se lea derecho
+            document.getElementById('turnDeg').style.transform = `rotate(-${deg}deg)`;
+        }
+
+        function updateUI() {
+            updateTimeDisplay();
+            updateTimerControls();
+            updateCompassVisuals();
+            setMode(state.mode); // Restaurar UI del modo
+        }
+
+        // --- LÓGICA DE INGRESO Y CÁLCULOS ---
+        function setMode(mode) {
+            state.mode = mode;
+            const btnTC = document.getElementById('btnModeTC');
+            const btnLaser = document.getElementById('btnModeLaser');
+            const divTC = document.getElementById('tcInput');
+            const divLaser = document.getElementById('laserInputs');
+
+            if (mode === 'TC') {
+                btnTC.className = "px-4 py-1 rounded-md text-sm font-bold bg-orange-600 text-white transition";
+                btnLaser.className = "px-4 py-1 rounded-md text-sm font-bold text-slate-400 hover:text-white transition";
+                divTC.classList.remove('hidden');
+                divLaser.classList.add('hidden');
+                document.getElementById('tiType').innerText = "(Medida Directa)";
+            } else {
+                btnLaser.className = "px-4 py-1 rounded-md text-sm font-bold bg-orange-600 text-white transition";
+                btnTC.className = "px-4 py-1 rounded-md text-sm font-bold text-slate-400 hover:text-white transition";
+                divLaser.classList.remove('hidden');
+                divTC.classList.add('hidden');
+                document.getElementById('tiType').innerText = `(Calculada: Promedio x ${REFRACTORY_RATIO})`;
+            }
+            calculateTi();
+            saveState();
+        }
+
+        function calculateTi() {
+            let tempFinal = null;
+            let val1=0, val2=0, val3=0;
 
             if (state.mode === 'TC') {
-                ti = parseFloat(inTc);
+                const val = parseFloat(document.getElementById('inpTC').value);
+                if (!isNaN(val)) tempFinal = val;
             } else {
-                const casco = [l1, l2, l3].filter(v => v > 0);
-                te = casco.length ? casco.reduce((a,b)=>a+b,0)/casco.length : 0;
-                ti = te * RATIO;
-                deltaAxial = casco.length ? Math.max(...casco) - Math.min(...casco) : 0;
-                if(document.getElementById('te-avg')) document.getElementById('te-avg').innerText = te.toFixed(1) + "°C";
+                val1 = parseFloat(document.getElementById('inpL1').value);
+                val2 = parseFloat(document.getElementById('inpL2').value);
+                val3 = parseFloat(document.getElementById('inpL3').value);
+                
+                if (!isNaN(val1) && !isNaN(val2) && !isNaN(val3)) {
+                    const prom = (val1 + val2 + val3) / 3;
+                    tempFinal = prom * REFRACTORY_RATIO;
+                }
             }
 
-            document.getElementById('main-ti').innerHTML = `${Math.round(ti)}<span class="text-4xl ml-2 font-black text-zinc-800 italic">°C</span>`;
+            const display = document.getElementById('displayTi');
+            if (tempFinal !== null) {
+                state.currentTi = Math.round(tempFinal);
+                display.innerText = state.currentTi;
+            } else {
+                state.currentTi = null;
+                display.innerText = "---";
+            }
+            runDiagnostics(val1, val3);
+        }
+
+        function updateDraftDisplay() {
+            const val = parseFloat(document.getElementById('inpDraft').value);
+            const display = document.getElementById('displayDraft');
+            if (!isNaN(val)) {
+                state.currentDraft = val;
+                display.innerText = val.toFixed(1);
+            } else {
+                state.currentDraft = null;
+                display.innerText = "--";
+            }
+            runDiagnostics();
+        }
+
+        // --- SISTEMA EXPERTO E IA MONITOR ---
+        function runDiagnostics(l1 = 0, l3 = 0) {
+            const panel = document.getElementById('alertsPanel');
+            panel.innerHTML = '';
+            let alerts = [];
+
+            if (state.currentTi === null && state.currentDraft === null) {
+                panel.innerHTML = '<div class="p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 text-center italic">Esperando datos para diagnóstico...</div>';
+                return;
+            }
+
+            const phase = getCurrentPhase();
+
+            // 1. Sanity Checks (Límites de cordura)
+            if (state.currentTi !== null && state.currentTi > 1200) {
+                 alerts.push({ type: 'critical', icon: 'alert-triangle', text: '¡ALERTA CRÍTICA! Temperatura Excesiva. Revise sensores inmediatamente.'});
+            }
+
+            // 2. Lógica de Draft
+            if (state.currentDraft !== null) {
+                if (state.currentDraft > 0) {
+                     alerts.push({ type: 'critical', icon: 'siren', text: 'PELIGRO: PRESIÓN POSITIVA. Riesgo inminente de fogonazo. Abra Dámper/Ventilador 100%.'});
+                } else if (state.currentDraft > phase.draftMin) {
+                    // ej. -0.5 > -1.0
+                    alerts.push({ type: 'warning', icon: 'wind', text: `Tiro Bajo / Riesgo de Retroceso (${state.currentDraft}). Sugerencia: <b>Abrir Dámper</b>.`});
+                } else if (state.currentDraft < phase.draftMax) {
+                    // ej. -3.0 < -2.5
+                    alerts.push({ type: 'warning', icon: 'wind', text: `Tiro Excesivo (${state.currentDraft}). Pérdida de calor. Sugerencia: <b>Cerrar Dámper</b>.`});
+                } else {
+                    alerts.push({ type: 'success', icon: 'check-circle', text: 'Draft en rango ideal para la fase.'});
+                }
+            }
+
+            // 3. Efecto Banana (Solo en modo Laser)
+            if (state.mode === 'LASER' && l1 > 0 && l3 > 0) {
+                const diff = Math.abs(l1 - l3);
+                if (diff > 80) {
+                    alerts.push({ type: 'danger', icon: 'activity', text: `¡EFECTO BANANA DETECTADO! Diferencial L1-L3 es de ${Math.round(diff)}°C (>80°C). Ajuste quemador o revise carga.`});
+                }
+            }
+
+            // 4. Lógica Térmica
+            if (state.currentTi !== null) {
+                if (state.currentTi < phase.tempMin) {
+                    alerts.push({ type: 'warning', icon: 'thermometer-snow', text: `Temperatura Baja (${state.currentTi}°C vs ${phase.tempMin}°C min). Sugerencia: <b>Aumentar Combustible</b>.`});
+                } else if (state.currentTi > phase.tempMax) {
+                    alerts.push({ type: 'warning', icon: 'thermometer-sun', text: `Temperatura Alta (${state.currentTi}°C vs ${phase.tempMax}°C max). Sugerencia: <b>Reducir Combustible</b>.`});
+                } else {
+                    alerts.push({ type: 'success', icon: 'check-circle', text: 'Temperatura en rango objetivo.'});
+                }
+            }
+
+            // Render Alerts
+            alerts.forEach(al => {
+                let colorClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                let iconColor = 'text-slate-400';
+                
+                if(al.type === 'critical') { colorClass = 'bg-red-900/50 text-red-200 border-red-700 animate-pulse'; iconColor = 'text-red-400'; }
+                if(al.type === 'danger') { colorClass = 'bg-orange-900/50 text-orange-200 border-orange-700'; iconColor = 'text-orange-400'; }
+                if(al.type === 'warning') { colorClass = 'bg-yellow-900/40 text-yellow-200 border-yellow-700'; iconColor = 'text-yellow-400'; }
+                if(al.type === 'success') { colorClass = 'bg-green-900/30 text-green-300 border-green-800'; iconColor = 'text-green-400'; }
+
+                panel.innerHTML += `
+                    <div class="p-3 border rounded-lg text-sm flex gap-3 items-start ${colorClass}">
+                        <i data-lucide="${al.icon}" class="w-5 h-5 shrink-0 ${iconColor}"></i>
+                        <span>${al.text}</span>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
             
-            // IA MONITOR
-            const console = document.getElementById('ia-console');
-            console.innerHTML = "";
-            const f = FASES[state.phase];
-            let intensiveTrigger = false;
-
-            // 1. Alerta Banana
-            if (deltaAxial >= LIMITE_BANANA_CRIT) {
-                addAi("🚨 PELIGRO BANANA CRÍTICO: ΔT Axial > "+deltaAxial.toFixed(0)+"°. ¡GIRO CONTINUO!", "text-red-500 font-black animate-pulse");
-                intensiveTrigger = true;
-            } else if (deltaAxial >= LIMITE_BANANA_WARN) {
-                addAi("⚠️ ADVERTENCIA BANANA: Diferencial axial elevado ("+deltaAxial.toFixed(0)+"°).", "text-orange-500");
-                if (deltaAxial > 60) intensiveTrigger = true;
-            }
-
-            // 2. Draft (Inverso)
-            if (draft !== null) {
-                if (draft > f.draft[0]) {
-                    addAi("💨 TIRO BAJO: Riesgo de retroceso de llama. -> ABRIR DÁMPER.", "text-red-500 font-bold");
-                    intensiveTrigger = true;
-                } else if (draft < f.draft[1]) {
-                    addAi("🌬️ EXCESO DE SUCCIÓN: Pérdida de calor. -> CERRAR DÁMPER.", "text-orange-400");
-                }
-            }
-
-            // 3. Alertas Térmicas
-            if (ti > 0) {
-                if (ti < f.temp[0]) addAi("🔥 BAJA TEMP: Incrementar flujo de combustible.", "text-orange-400");
-                else if (ti > f.temp[1]) {
-                    addAi("🛑 ALTA TEMP: Reducir combustible para proteger refractario.", "text-red-500 font-bold");
-                    intensiveTrigger = true;
-                }
-
-                // Salto Térmico (Protección)
-                const jump = Math.abs(ti - state.lastTi);
-                if (jump > LIMITE_SALTO && state.lastTi > 0) {
-                    addAi("📈 SALTO TÉRMICO DETECTADO: Var: "+jump.toFixed(0)+"°C. ¡Estabilizar!", "text-red-600 font-black");
-                    intensiveTrigger = true;
-                }
-            }
-
-            // Gestión de Frecuencia Inteligente
-            if (intensiveTrigger) {
-                state.freqMode = 'INTENSIVE';
-                state.stableCount = 0;
-            }
-
-            if (console.innerHTML === "") addAi("✅ Estabilidad operativa detectada.", "text-emerald-500 opacity-60");
+            // Retornar resumen para log
+            const dangerAlert = alerts.find(a => a.type === 'critical' || a.type === 'danger' || a.type === 'warning');
+            return dangerAlert ? dangerAlert.text.replace(/<\/?[^>]+(>|$)/g, "") : "Parámetros en norma";
         }
 
-        function addAi(txt, cls) {
-            const p = document.createElement('p');
-            p.className = cls;
-            p.innerText = txt;
-            document.getElementById('ia-console').appendChild(p);
-        }
+        // --- REGISTRO Y EXPORTACIÓN ---
+        function registrarDato() {
+            const opName = document.getElementById('opName').value.trim();
+            const opShift = document.getElementById('opShift').value;
 
-        // --- PERSISTENCIA & LOGS ---
-        function confirmRotation() {
-            state.giroDeg = (state.giroDeg + 90) % 360;
-            document.getElementById('compass-dial').style.transform = `rotate(${state.giroDeg}deg)`;
-            document.getElementById('giro-text').innerText = `${state.giroDeg}°`;
-            state.rotSeconds = FASES[state.phase].rot * 60;
-            document.getElementById('rotation-card').classList.remove('alert-active');
-        }
-
-        function saveRecord() {
-            const op = document.getElementById('op_name').value;
-            const punta = document.getElementById('op_punta').value;
-            const ti = parseInt(document.getElementById('main-ti').innerText);
-            const draft = document.getElementById('in-draft').value;
-
-            // Validaciones
-            if (!op || ti === 0) {
-                alert("Validación Fallida: Operador vacío o Temperatura en cero.");
+            if (!opName || !opShift) {
+                alert("Validación Fallida: Ingrese Nombre del Operador y Turno.");
                 return;
             }
 
-            // Evitar duplicados en el mismo minuto
-            const nowTime = Math.floor(state.seconds / 60);
-            if (nowTime === state.lastSaveTime) {
-                alert("Registro bloqueado: Espere 1 minuto para evitar duplicados.");
+            if (state.currentTi === null || state.currentTi === 0) {
+                alert("Validación Fallida: Temperatura no válida (0 o vacía).");
                 return;
             }
 
-            const record = {
-                h: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                t_proc: document.getElementById('master-clock').innerText,
-                op: `${op} [${punta}]`,
-                ti: ti,
-                mode: state.mode,
-                draft: draft || "0",
-                freq: state.freqMode === 'INTENSIVE' ? 'INT' : 'NOR',
-                giro: state.giroDeg + "°"
+            if (state.currentDraft === null) {
+                alert("Validación Fallida: Debe ingresar valor de Draft.");
+                return;
+            }
+
+            const diagnostico = runDiagnostics(); // Obtener el texto limpio
+            const now = new Date(); // Sello de tiempo inmutable
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const logEntry = {
+                timestamp: now.toISOString(),
+                timeStr: timeStr,
+                operator: `${opName} (${opShift})`,
+                ti: state.currentTi,
+                source: state.mode,
+                draft: state.currentDraft,
+                phase: getCurrentPhase().name,
+                position: ROTATION_ANGLES[state.currentAngleIndex],
+                diag: diagnostico
             };
 
-            state.logs.unshift(record);
-            state.lastSaveTime = nowTime;
-            state.lastTi = ti;
-
-            // Manejo de regreso a frecuencia normal
-            if (state.freqMode === 'INTENSIVE') {
-                state.stableCount++;
-                if (state.stableCount >= 3) {
-                    state.freqMode = 'NORMAL';
-                    state.stableCount = 0;
-                }
-            }
-
-            saveToLocal();
+            state.logs.unshift(logEntry); // Insertar al inicio
+            saveState();
             renderLogs();
+
+            // Clear inputs
+            document.getElementById('inpTC').value = '';
+            document.getElementById('inpL1').value = '';
+            document.getElementById('inpL2').value = '';
+            document.getElementById('inpL3').value = '';
+            document.getElementById('inpDraft').value = '';
+            state.currentTi = null;
+            state.currentDraft = null;
+            calculateTi();
+            updateDraftDisplay();
             
-            // Limpiar inputs
-            if(document.getElementById('in-tc')) document.getElementById('in-tc').value = "";
-            if(document.getElementById('l1')) {
-                document.getElementById('l1').value = "";
-                document.getElementById('l2').value = "";
-                document.getElementById('l3').value = "";
-            }
-            document.getElementById('in-draft').value = "";
-            process();
+            // Feedback visual
+            const btn = document.querySelector('button[onclick="registrarDato()"]');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> GUARDADO';
+            btn.classList.replace('bg-green-600', 'bg-emerald-500');
+            lucide.createIcons();
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('bg-emerald-500', 'bg-green-600');
+                lucide.createIcons();
+            }, 2000);
         }
 
         function renderLogs() {
-            const list = document.getElementById('log-list');
-            list.innerHTML = state.logs.map(l => `
-                <div class="bg-white/5 p-3 rounded-2xl border border-white/5 relative overflow-hidden group">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-zinc-500 font-black">${l.h} | T:${l.t_proc}</span>
-                        <span class="text-fuego font-black text-xs">${l.ti}°C</span>
-                    </div>
-                    <div class="flex justify-between text-[7px] font-bold uppercase tracking-widest text-zinc-400">
-                        <span>${l.op}</span>
-                        <span class="${l.freq === 'INT' ? 'text-orange-500' : 'text-emerald-500'}">F:${l.freq}</span>
-                    </div>
-                    <div class="mt-1 flex gap-2 text-[7px] font-bold text-zinc-600">
-                        <span>DRAFT: ${l.draft}</span>
-                        <span>MODO: ${l.mode}</span>
-                        <span>GIRO: ${l.giro}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function saveToLocal() {
-            localStorage.setItem('otm_55_sec', state.seconds);
-            localStorage.setItem('otm_55_logs', JSON.stringify(state.logs));
-            localStorage.setItem('otm_55_op', document.getElementById('op_name').value);
-            localStorage.setItem('otm_55_punta', document.getElementById('op_punta').value);
+            const tbody = document.getElementById('logTableBody');
+            tbody.innerHTML = '';
             
-            // Sync dot indicator
-            const dot = document.getElementById('sync-dot');
-            dot.className = "status-dot bg-emerald-500";
-            document.getElementById('sync-text').innerText = "Sincronizado";
+            state.logs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-700/50 transition-colors';
+                
+                let diagColor = 'text-slate-300';
+                if(log.diag.includes('PELIGRO') || log.diag.includes('CRÍTICA') || log.diag.includes('BANANA')) diagColor = 'text-red-400 font-bold';
+                else if(log.diag.includes('Sugerencia')) diagColor = 'text-yellow-400';
+                else if(log.diag.includes('norma')) diagColor = 'text-green-400';
+
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-mono text-slate-300">${log.timeStr}</td>
+                    <td class="px-4 py-2 text-slate-200">${log.operator}</td>
+                    <td class="px-4 py-2 font-bold text-orange-400">${log.ti}</td>
+                    <td class="px-4 py-2 text-xs text-slate-400">${log.source}</td>
+                    <td class="px-4 py-2 font-bold text-blue-400">${log.draft}</td>
+                    <td class="px-4 py-2 text-xs text-slate-400">${log.phase} / ${log.position}°</td>
+                    <td class="px-4 py-2 text-xs truncate max-w-xs ${diagColor}" title="${log.diag}">${log.diag}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         function exportCSV() {
-            let csv = "Hora,Total_Proc,Operador,Ti,Modo,Draft,Freq,Giro\n";
-            state.logs.forEach(l => {
-                csv += `${l.h},${l.t_proc},${l.op},${l.ti},${l.mode},${l.draft},${l.freq},${l.giro}\n`;
+            if (state.logs.length === 0) {
+                alert("No hay datos para exportar.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Fecha ISO,Hora,Operador,Temperatura Interna (C),Origen,Draft (mmca),Fase,Posicion (grados),Diagnostico\n";
+
+            state.logs.forEach(row => {
+                // Limpiar comas del diagnostico para no romper el CSV
+                const cleanDiag = row.diag.replace(/,/g, " - ");
+                const csvRow = `${row.timestamp},${row.timeStr},${row.operator},${row.ti},${row.source},${row.draft},${row.phase},${row.position},${cleanDiag}`;
+                csvContent += csvRow + "\n";
             });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `OTM120H_V55_Report_${Date.now()}.csv`;
-            a.click();
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `OTM120H_Log_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
-        function hours() { return state.seconds / 3600; }
+        // Arrancar
+        window.onload = init;
+
     </script>
-
-    <style>
-        @keyframes pulse-alert {
-            0%, 100% { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
-            50% { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
-        }
-        .alert-active { animation: pulse-alert 1.5s infinite; }
-        .animate-spin-slow { animation: spin 12s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    </style>
 </body>
-</html>           
+</html>
