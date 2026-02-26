@@ -11,8 +11,6 @@
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; }
         .glow-text-orange { text-shadow: 0 0 10px rgba(249, 115, 22, 0.5); }
         .glow-text-blue { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
-        .compass-ring { border-radius: 50%; border: 4px dashed #475569; position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; transition: all 0.5s ease; }
-        .compass-marker { position: absolute; width: 12px; height: 12px; background: #f97316; border-radius: 50%; top: -8px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px #f97316; }
         input[type="number"], input[type="text"], select { background: #1e293b; border: 1px solid #475569; color: white; border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; }
         input:focus, select:focus { border-color: #f97316; box-shadow: 0 0 0 1px #f97316; }
         
@@ -110,10 +108,41 @@
             <!-- Brújula de Giro -->
             <div class="glass-panel rounded-xl p-5 flex flex-col items-center justify-center relative">
                 <h2 class="text-slate-400 text-sm font-bold tracking-widest mb-4 uppercase">Posición Horno</h2>
-                <div class="compass-ring" id="compassRing">
-                    <div class="compass-marker"></div>
-                    <span id="turnDeg" class="text-3xl font-bold">0°</span>
+                
+                <!-- Gráfico de Horno Animado -->
+                <div class="relative flex items-center justify-center w-32 h-32 mb-2">
+                    <div id="kilnGraphic" class="absolute inset-0 transition-transform duration-1000 ease-in-out" style="transform: rotate(0deg);">
+                        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all duration-300">
+                            <!-- Casco Exterior -->
+                            <circle cx="50" cy="50" r="48" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
+                            <!-- Refractario -->
+                            <circle cx="50" cy="50" r="40" fill="#334155" stroke="#0f172a" stroke-width="4"/>
+                            <!-- Fuego interior -->
+                            <circle cx="50" cy="50" r="28" fill="url(#fireGradient)"/>
+                            
+                            <!-- Escotilla/Marca principal (indicador de rotación) -->
+                            <path d="M 42 2 L 58 2 L 55 10 L 45 10 Z" fill="#f97316"/>
+                            
+                            <!-- Ejes visuales -->
+                            <line x1="50" y1="10" x2="50" y2="22" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
+                            <line x1="50" y1="78" x2="50" y2="90" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
+                            <line x1="10" y1="50" x2="22" y2="50" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
+                            <line x1="78" y1="50" x2="90" y2="50" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
+                            
+                            <defs>
+                                <radialGradient id="fireGradient" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#fef08a"/>
+                                    <stop offset="40%" stop-color="#f97316"/>
+                                    <stop offset="80%" stop-color="#991b1b"/>
+                                    <stop offset="100%" stop-color="#450a0a"/>
+                                </radialGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <!-- Indicador de grados centrado -->
+                    <span id="turnDeg" class="text-2xl font-bold text-white z-10 drop-shadow-lg bg-slate-900/60 px-3 py-1 rounded-lg backdrop-blur-sm border border-slate-700/50">0°</span>
                 </div>
+
                 <div class="mt-4 text-center">
                     <div class="text-xs text-slate-500">Próximo giro en:</div>
                     <div id="turnTimer" class="text-2xl font-mono text-yellow-400 font-bold">00:00</div>
@@ -261,6 +290,7 @@
         ];
 
         let timerInterval = null;
+        let absoluteRotation = 0; // Para animación continua sin saltos
 
         // INICIALIZACIÓN
         function init() {
@@ -307,6 +337,7 @@
                     state = { ...state, ...parsed };
                 } catch(e) { console.error("Error cargando estado", e); }
             }
+            absoluteRotation = state.currentAngleIndex * 90; // Sincronizar posición gráfica
         }
 
         // --- LÓGICA DE TIEMPOS Y FASES ---
@@ -380,21 +411,20 @@
             osc.stop(ctx.currentTime + 0.5);
 
             // Alerta visual
-            const compass = document.getElementById('compassRing');
-            compass.style.borderColor = '#ef4444'; // Rojo
-            compass.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+            const kilnSvg = document.getElementById('kilnGraphic').querySelector('svg');
+            kilnSvg.classList.replace('drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]', 'drop-shadow-[0_0_25px_rgba(239,68,68,0.8)]');
         }
 
         function resetTurn() {
             state.currentAngleIndex = (state.currentAngleIndex + 1) % ROTATION_ANGLES.length;
+            absoluteRotation += 90; // Incrementar rotación absoluta
             const phase = getCurrentPhase();
             state.turnSeconds = phase.turnMins * 60;
             saveState();
             
             // Reset visuales alarma
-            const compass = document.getElementById('compassRing');
-            compass.style.borderColor = '#475569';
-            compass.style.boxShadow = 'none';
+            const kilnSvg = document.getElementById('kilnGraphic').querySelector('svg');
+            kilnSvg.classList.replace('drop-shadow-[0_0_25px_rgba(239,68,68,0.8)]', 'drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]');
             
             updateCompassVisuals();
             updateTimeDisplay();
@@ -453,9 +483,7 @@
         function updateCompassVisuals() {
             const deg = ROTATION_ANGLES[state.currentAngleIndex];
             document.getElementById('turnDeg').innerText = `${deg}°`;
-            document.getElementById('compassRing').style.transform = `rotate(${deg}deg)`;
-            // Compensar la rotación en el texto para que siempre se lea derecho
-            document.getElementById('turnDeg').style.transform = `rotate(-${deg}deg)`;
+            document.getElementById('kilnGraphic').style.transform = `rotate(${absoluteRotation}deg)`;
         }
 
         function updateUI() {
