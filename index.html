@@ -3,39 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTM 120H - Sistema de Control Maestro</title>
+    <title>OTM 120H - Sistema de Control Maestro V7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; }
-        .glow-text-orange { text-shadow: 0 0 10px rgba(249, 115, 22, 0.5); }
-        .glow-text-blue { text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
-        input[type="number"], input[type="text"], select { background: #1e293b; border: 1px solid #475569; color: white; border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; }
+        .glow-text-orange { text-shadow: 0 0 15px rgba(249, 115, 22, 0.6); }
+        .glow-text-blue { text-shadow: 0 0 15px rgba(56, 189, 248, 0.6); }
+        
+        input[type="number"], input[type="text"], select { background: #1e293b; border: 1px solid #475569; color: white; border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; transition: border-color 0.2s; }
         input:focus, select:focus { border-color: #f97316; box-shadow: 0 0 0 1px #f97316; }
         
         /* Ocultar flechas de los inputs number */
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
+
+        /* Animación suave para el horno */
+        .kiln-rotation { transition: transform 1s ease-in-out; }
+        
+        /* Efecto de Alarma Crítica */
+        .alarm-flash { animation: flashRed 1s infinite alternate; }
+        @keyframes flashRed {
+            0% { filter: drop-shadow(0 0 15px rgba(249,115,22,0.3)); }
+            100% { filter: drop-shadow(0 0 35px rgba(239,68,68,1)); }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden relative selection:bg-orange-500 selection:text-white">
 
-    <!-- PANTALLA DE BLOQUEO -->
-    <div id="loginScreen" class="absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500">
+    <!-- PANTALLA DE BLOQUEO (Anti-Sabotaje) -->
+    <div id="loginScreen" class="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-500">
         <i data-lucide="shield-alert" class="w-20 h-20 text-orange-500 mb-6 animate-pulse"></i>
-        <h1 class="text-3xl font-bold tracking-widest mb-2">OTM 120H <span class="text-orange-500">V5+</span></h1>
+        <h1 class="text-3xl font-bold tracking-widest mb-2">OTM 120H <span class="text-orange-500">V7</span></h1>
         <p class="text-slate-400 mb-8">SISTEMA DE CONTROL MAESTRO</p>
         <div class="glass-panel p-8 rounded-xl text-center w-80">
             <label class="block text-sm font-semibold text-slate-300 mb-4">INGRESE PIN DE ACCESO</label>
-            <input type="password" id="pinInput" class="text-center text-2xl tracking-widest mb-4" maxlength="4" placeholder="••••">
-            <button onclick="checkPIN()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 px-4 rounded transition-colors">DESBLOQUEAR</button>
-            <p id="pinError" class="text-red-400 text-sm mt-2 hidden">PIN Incorrecto</p>
+            <input type="password" id="pinInput" class="text-center text-3xl tracking-[0.5em] mb-4 font-mono" maxlength="4" placeholder="••••">
+            <button onclick="checkPIN()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded transition-colors shadow-lg shadow-orange-900/50">DESBLOQUEAR</button>
+            <p id="pinError" class="text-red-400 text-sm mt-3 hidden bg-red-950/50 py-1 rounded">PIN Incorrecto</p>
         </div>
     </div>
 
     <!-- CABECERA -->
-    <header class="glass-panel px-6 py-3 flex justify-between items-center z-10">
+    <header class="glass-panel px-6 py-3 flex justify-between items-center z-10 border-b border-slate-700">
         <div class="flex items-center gap-3">
             <i data-lucide="flame" class="text-orange-500 w-8 h-8"></i>
             <div>
@@ -45,16 +56,16 @@
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
-                    <span id="connStatus">Storage Local Activo y Seguro</span>
+                    <span>Storage Local Activo</span>
                 </div>
             </div>
         </div>
-        <div class="flex gap-4 items-center">
+        <div class="flex gap-4 items-center bg-slate-800 p-2 rounded-lg border border-slate-700">
             <div>
-                <input type="text" id="opName" placeholder="Nombre del Operador" class="text-sm w-48">
+                <input type="text" id="opName" placeholder="Nombre Operador" class="text-sm w-48 bg-slate-900 border-none" oninput="saveInputs()">
             </div>
             <div>
-                <select id="opShift" class="text-sm w-32">
+                <select id="opShift" class="text-sm w-36 bg-slate-900 border-none" onchange="saveInputs()">
                     <option value="">Turno...</option>
                     <option value="A">Punta A (Mañana)</option>
                     <option value="B">Punta B (Tarde)</option>
@@ -65,171 +76,192 @@
     </header>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 p-4 z-10">
+    <main class="flex-1 overflow-hidden flex flex-col xl:flex-row gap-4 p-4 z-10">
         
-        <!-- COLUMNA IZQUIERDA: Relojes y Fases -->
-        <div class="w-full md:w-1/4 flex flex-col gap-4">
-            <!-- Global Timer -->
-            <div class="glass-panel rounded-xl p-5 flex flex-col items-center">
-                <h2 class="text-slate-400 text-sm font-bold tracking-widest mb-2 uppercase">Tiempo Global de Curado</h2>
-                <div id="globalTimer" class="text-4xl font-mono font-bold glow-text-orange mb-4">000:00:00</div>
+        <!-- COLUMNA IZQUIERDA: Tiempos Globales y Tolerancias (Brújula de Fase) -->
+        <div class="w-full xl:w-1/4 flex flex-col gap-4">
+            <!-- Cronómetro Global -->
+            <div class="glass-panel rounded-xl p-5 flex flex-col items-center shadow-lg">
+                <h2 class="text-slate-400 text-xs font-bold tracking-widest mb-1 uppercase">Cronómetro Global de Curado</h2>
+                <div class="text-slate-500 text-xs mb-3">Límite Total: 120 Horas</div>
+                <div id="globalTimer" class="text-5xl font-mono font-bold glow-text-orange mb-4">000:00:00</div>
                 <div class="flex gap-2 w-full">
-                    <button id="btnToggleTimer" onclick="toggleGlobalTimer()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded font-semibold flex justify-center items-center gap-2 transition">
-                        <i data-lucide="play" id="iconTimer" class="w-4 h-4"></i> <span id="textTimer">Iniciar</span>
+                    <button id="btnToggleTimer" onclick="toggleGlobalTimer()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition uppercase tracking-wider">
+                        <i data-lucide="play" id="iconTimer" class="w-5 h-5"></i> <span id="textTimer">Iniciar</span>
                     </button>
-                    <button onclick="resetGlobalTimer()" class="bg-red-900 hover:bg-red-800 text-red-200 py-2 px-3 rounded transition" title="Reiniciar Curado">
-                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <button onclick="resetGlobalTimer()" class="bg-red-900 hover:bg-red-800 text-red-200 py-3 px-4 rounded-lg transition" title="Reiniciar Curado Completo">
+                        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Brújula de Fase -->
-            <div class="glass-panel rounded-xl p-5 flex-1 border-t-4 border-orange-500">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-slate-400 text-sm font-bold tracking-widest uppercase">Brújula de Fase</h2>
-                    <span id="phaseBadge" class="bg-orange-500 text-white text-xs px-2 py-1 rounded font-bold">FASE 1</span>
+            <!-- Brújula de Fase (¡INTRANSFERIBLE!) -->
+            <div class="glass-panel rounded-xl p-5 flex-1 border-t-4 border-orange-500 shadow-lg relative overflow-hidden">
+                <i data-lucide="compass" class="absolute -right-4 -bottom-4 w-32 h-32 text-slate-800/30"></i>
+                <div class="flex justify-between items-center mb-6 relative z-10">
+                    <h2 class="text-slate-300 text-sm font-bold tracking-widest uppercase">Brújula de Fase</h2>
+                    <span id="phaseBadge" class="bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">FASE 1</span>
                 </div>
-                <div class="space-y-4">
-                    <div>
-                        <span class="text-xs text-slate-500 block">Objetivo Térmico</span>
-                        <div class="text-xl font-bold text-orange-400"><span id="targetTemp">120-150</span> °C</div>
+                <div class="space-y-5 relative z-10">
+                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 block uppercase tracking-wider mb-1">Objetivo de Temperatura</span>
+                        <div class="text-2xl font-bold text-orange-400"><span id="targetTemp">120-150</span> <span class="text-base text-slate-400">°C</span></div>
                     </div>
-                    <div>
-                        <span class="text-xs text-slate-500 block">Draft Ideal (mmca)</span>
-                        <div class="text-xl font-bold text-blue-400"><span id="targetDraft">-1.0 a -2.5</span></div>
+                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 block uppercase tracking-wider mb-1">Rango Draft Ideal</span>
+                        <div class="text-2xl font-bold text-blue-400"><span id="targetDraft">-1.0 a -2.5</span> <span class="text-base text-slate-400">mmca</span></div>
                     </div>
-                    <div>
-                        <span class="text-xs text-slate-500 block">Frecuencia de Giro</span>
-                        <div class="text-xl font-bold text-slate-200">Cada <span id="targetTurn">60</span> min</div>
+                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 block uppercase tracking-wider mb-1">Frecuencia de Giro</span>
+                        <div class="text-2xl font-bold text-slate-200">Cada <span id="targetTurn" class="text-yellow-400">60</span> <span class="text-base text-slate-400">minutos</span></div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Brújula de Giro -->
-            <div class="glass-panel rounded-xl p-5 flex flex-col items-center justify-center relative">
-                <h2 class="text-slate-400 text-sm font-bold tracking-widest mb-4 uppercase">Posición Horno</h2>
+        </div>
+
+        <!-- COLUMNA CENTRAL: Monitoreo Térmico y Panel de Ingreso -->
+        <div class="w-full xl:w-2/4 flex flex-col gap-4">
+            <!-- Display Principal -->
+            <div class="glass-panel rounded-xl p-8 flex flex-col items-center justify-center flex-1 relative overflow-hidden shadow-lg border border-slate-700">
+                <div class="absolute top-4 left-4 flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
+                    <i data-lucide="thermometer" class="w-4 h-4"></i> Temperatura Interna <span id="tiType" class="text-orange-500 text-xs ml-1">(TC Directa)</span>
+                </div>
                 
-                <!-- Gráfico de Horno Animado -->
-                <div class="relative flex items-center justify-center w-32 h-32 mb-2">
-                    <div id="kilnGraphic" class="absolute inset-0 transition-transform duration-1000 ease-in-out" style="transform: rotate(0deg);">
-                        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_15px_rgba(249,115,22,0.3)] transition-all duration-300">
-                            <!-- Casco Exterior -->
+                <!-- Display Masivo Ti -->
+                <div class="text-[9rem] leading-none font-bold text-white glow-text-orange tabular-nums tracking-tighter" id="displayTi">
+                    ---
+                </div>
+                <span class="text-3xl text-slate-400 mt-2 font-light">°C</span>
+                
+                <div class="absolute bottom-4 right-4 flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-full border border-slate-700 backdrop-blur-sm">
+                    <i data-lucide="wind" class="text-blue-400"></i>
+                    <span class="text-3xl font-bold text-blue-400 glow-text-blue" id="displayDraft">--</span>
+                    <span class="text-slate-400 text-sm">mmca</span>
+                </div>
+            </div>
+
+            <!-- Panel de Ingreso de Datos -->
+            <div class="glass-panel rounded-xl p-5 shadow-lg border-t-2 border-slate-600">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                    <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm flex items-center gap-2">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i> Registro de Variables
+                    </h2>
+                    <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700 shadow-inner">
+                        <button id="btnModeTC" onclick="setMode('TC')" class="px-5 py-1.5 rounded-md text-sm font-bold bg-orange-600 text-white transition-all shadow-md">TERMOCUPLA</button>
+                        <button id="btnModeLaser" onclick="setMode('LASER')" class="px-5 py-1.5 rounded-md text-sm font-bold text-slate-400 hover:text-white transition-all">LÁSER (Pistola)</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-5">
+                    <!-- Inputs Laser (Cálculo 3.5x) -->
+                    <div id="laserInputs" class="col-span-3 grid grid-cols-3 gap-3 hidden">
+                        <div>
+                            <label class="block text-xs text-slate-400 font-bold mb-1 uppercase">L1: Carga (°C)</label>
+                            <input type="number" id="inpL1" placeholder="Ext. Carga" oninput="calculateTi()" class="text-lg text-center font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 font-bold mb-1 uppercase">L2: Centro (°C)</label>
+                            <input type="number" id="inpL2" placeholder="Ext. Centro" oninput="calculateTi()" class="text-lg text-center font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 font-bold mb-1 uppercase">L3: Descarga (°C)</label>
+                            <input type="number" id="inpL3" placeholder="Ext. Desc." oninput="calculateTi()" class="text-lg text-center font-mono">
+                        </div>
+                    </div>
+                    
+                    <!-- Input TC (Directo) -->
+                    <div id="tcInput" class="col-span-3">
+                        <label class="block text-xs text-orange-400 font-bold mb-1 uppercase">Lectura Termocupla Interna (°C)</label>
+                        <input type="number" id="inpTC" placeholder="Ingrese lectura TC" class="text-2xl text-center font-mono py-2" oninput="calculateTi()">
+                    </div>
+
+                    <!-- Draft -->
+                    <div class="col-span-1 border-l border-slate-700 pl-5">
+                        <label class="block text-xs text-blue-400 font-bold mb-1 uppercase">Draft (mmca)</label>
+                        <input type="number" id="inpDraft" placeholder="-1.5" step="0.1" oninput="updateDraftDisplay()" class="text-2xl text-center font-mono py-2">
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <button onclick="registrarDatoManual()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg flex justify-center items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                        <i data-lucide="save" class="w-5 h-5"></i> GUARDAR PARÁMETROS EN BITÁCORA
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: Animación de Horno y Alertas -->
+        <div class="w-full xl:w-1/4 flex flex-col gap-4">
+            
+            <!-- Brújula de Giro (Gráfico de Horno Animado) -->
+            <div class="glass-panel rounded-xl p-5 flex flex-col items-center justify-between relative shadow-lg min-h-[300px]">
+                <div class="w-full flex justify-between items-center mb-2">
+                    <h2 class="text-slate-300 text-sm font-bold tracking-widest uppercase">Rotación del Horno</h2>
+                    <span id="turnDegBadge" class="bg-slate-800 text-slate-300 border border-slate-600 text-xs px-2 py-1 rounded font-mono">Posición: 0°</span>
+                </div>
+                
+                <!-- Contenedor del Horno SVG -->
+                <div class="relative flex items-center justify-center w-40 h-40 my-4">
+                    <div id="kilnGraphicWrapper" class="absolute inset-0 kiln-rotation drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]" style="transform: rotate(0deg);">
+                        <svg viewBox="0 0 100 100" class="w-full h-full">
+                            <!-- Carcasa -->
                             <circle cx="50" cy="50" r="48" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
                             <!-- Refractario -->
-                            <circle cx="50" cy="50" r="40" fill="#334155" stroke="#0f172a" stroke-width="4"/>
-                            <!-- Fuego interior -->
-                            <circle cx="50" cy="50" r="28" fill="url(#fireGradient)"/>
+                            <circle cx="50" cy="50" r="40" fill="#334155" stroke="#475569" stroke-width="1" stroke-dasharray="4,2"/>
+                            <!-- Fuego / Calor Interno -->
+                            <circle cx="50" cy="50" r="30" fill="url(#fireGradient)"/>
                             
-                            <!-- Escotilla/Marca principal (indicador de rotación) -->
-                            <path d="M 42 2 L 58 2 L 55 10 L 45 10 Z" fill="#f97316"/>
-                            
-                            <!-- Ejes visuales -->
-                            <line x1="50" y1="10" x2="50" y2="22" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
-                            <line x1="50" y1="78" x2="50" y2="90" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
-                            <line x1="10" y1="50" x2="22" y2="50" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
-                            <line x1="78" y1="50" x2="90" y2="50" stroke="#475569" stroke-width="2" stroke-dasharray="2,2"/>
+                            <!-- Indicador de Rotación (Muesca naranja) -->
+                            <path d="M 40 2 L 60 2 L 55 12 L 45 12 Z" fill="#f97316"/>
+                            <!-- Remaches visuales -->
+                            <circle cx="50" cy="8" r="2" fill="#0f172a"/>
+                            <circle cx="92" cy="50" r="2" fill="#475569"/>
+                            <circle cx="50" cy="92" r="2" fill="#475569"/>
+                            <circle cx="8" cy="50" r="2" fill="#475569"/>
                             
                             <defs>
                                 <radialGradient id="fireGradient" cx="50%" cy="50%" r="50%">
                                     <stop offset="0%" stop-color="#fef08a"/>
-                                    <stop offset="40%" stop-color="#f97316"/>
-                                    <stop offset="80%" stop-color="#991b1b"/>
+                                    <stop offset="30%" stop-color="#f97316"/>
+                                    <stop offset="70%" stop-color="#991b1b"/>
                                     <stop offset="100%" stop-color="#450a0a"/>
                                 </radialGradient>
                             </defs>
                         </svg>
                     </div>
-                    <!-- Indicador de grados centrado -->
-                    <span id="turnDeg" class="text-2xl font-bold text-white z-10 drop-shadow-lg bg-slate-900/60 px-3 py-1 rounded-lg backdrop-blur-sm border border-slate-700/50">0°</span>
-                </div>
-
-                <div class="mt-4 text-center">
-                    <div class="text-xs text-slate-500">Próximo giro en:</div>
-                    <div id="turnTimer" class="text-2xl font-mono text-yellow-400 font-bold">00:00</div>
-                </div>
-                <button onclick="resetTurn()" class="mt-3 bg-slate-700 hover:bg-slate-600 text-sm py-1 px-4 rounded-full transition w-full">Girar y Reiniciar</button>
-            </div>
-        </div>
-
-        <!-- COLUMNA CENTRAL: Monitoreo Térmico -->
-        <div class="w-full md:w-2/4 flex flex-col gap-4">
-            <!-- Display Principal -->
-            <div class="glass-panel rounded-xl p-8 flex flex-col items-center justify-center flex-1 relative overflow-hidden">
-                <div class="absolute top-4 left-4 text-slate-400 text-sm font-bold uppercase tracking-widest">Temperatura Interna <span id="tiType" class="text-orange-500 text-xs">(Calculada)</span></div>
-                
-                <!-- Massive central display -->
-                <div class="text-[8rem] leading-none font-bold text-white glow-text-orange tabular-nums tracking-tighter" id="displayTi">
-                    ---
-                </div>
-                <span class="text-3xl text-slate-400 mt-2">°C</span>
-                
-                <div class="absolute bottom-4 right-4 flex items-center gap-2">
-                    <i data-lucide="wind" class="text-blue-400"></i>
-                    <span class="text-2xl font-bold text-blue-400 glow-text-blue" id="displayDraft">--</span>
-                    <span class="text-slate-400">mmca</span>
-                </div>
-            </div>
-
-            <!-- Panel de Controles / Inputs -->
-            <div class="glass-panel rounded-xl p-5">
-                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                    <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm">Ingreso de Datos</h2>
-                    <div class="flex bg-slate-800 rounded-lg p-1">
-                        <button id="btnModeTC" onclick="setMode('TC')" class="px-4 py-1 rounded-md text-sm font-bold bg-orange-600 text-white transition">TERMOCUPLA</button>
-                        <button id="btnModeLaser" onclick="setMode('LASER')" class="px-4 py-1 rounded-md text-sm font-bold text-slate-400 hover:text-white transition">PISTOLA (Láser)</button>
+                    <!-- Overlay texto central -->
+                    <div class="z-10 bg-slate-900/80 backdrop-blur-sm rounded-full w-14 h-14 flex items-center justify-center border-2 border-slate-700 shadow-inner">
+                        <i data-lucide="refresh-cw" class="w-6 h-6 text-orange-500"></i>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-4 gap-4">
-                    <!-- Inputs Laser (Hidden by default) -->
-                    <div id="laserInputs" class="col-span-3 grid grid-cols-3 gap-2 hidden">
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1">L1: Carga (°C)</label>
-                            <input type="number" id="inpL1" placeholder="Ext. Carga" oninput="calculateTi()">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1">L2: Centro (°C)</label>
-                            <input type="number" id="inpL2" placeholder="Ext. Centro" oninput="calculateTi()">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1">L3: Descarga (°C)</label>
-                            <input type="number" id="inpL3" placeholder="Ext. Desc." oninput="calculateTi()">
-                        </div>
-                    </div>
-                    
-                    <!-- Input TC -->
-                    <div id="tcInput" class="col-span-3">
-                        <label class="block text-xs text-orange-400 font-bold mb-1">Temperatura Interna Real (°C)</label>
-                        <input type="number" id="inpTC" placeholder="Lectura Termocupla" class="text-lg" oninput="calculateTi()">
-                    </div>
-
-                    <!-- Draft General -->
-                    <div class="col-span-1 border-l border-slate-700 pl-4">
-                        <label class="block text-xs text-blue-400 font-bold mb-1">Draft (mmca)</label>
-                        <input type="number" id="inpDraft" placeholder="-1.5" step="0.1" oninput="updateDraftDisplay()">
-                    </div>
-                </div>
-
-                <div class="mt-4 flex gap-2">
-                    <button onclick="registrarDato()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 transition shadow-lg shadow-green-900/50">
-                        <i data-lucide="save" class="w-5 h-5"></i> REGISTRAR LECTURA
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- COLUMNA DERECHA: IA Monitor y Alertas -->
-        <div class="w-full md:w-1/4 flex flex-col gap-4">
-            <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col">
-                <div class="flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
-                    <i data-lucide="cpu" class="text-purple-400"></i>
-                    <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm">IA Monitor / Diagnóstico</h2>
+                <div class="w-full text-center bg-slate-800/50 p-3 rounded-lg border border-slate-700 mb-3">
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Cronómetro de Giro</div>
+                    <div id="turnTimer" class="text-4xl font-mono font-bold text-yellow-400">00:00</div>
                 </div>
                 
-                <div id="alertsPanel" class="flex-1 space-y-3 overflow-y-auto pr-2">
-                    <!-- Alertas se generan dinamicamente aqui -->
+                <!-- Botón de Acción Automática -->
+                <button onclick="executeTurn()" class="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 border border-orange-500">
+                    <i data-lucide="rotate-cw" class="w-5 h-5"></i> REGISTRAR GIRO (+90°)
+                </button>
+            </div>
+
+            <!-- IA Monitor -->
+            <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col shadow-lg">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="cpu" class="text-purple-400 w-5 h-5"></i>
+                        <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm">IA Diagnóstico</h2>
+                    </div>
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                    </span>
+                </div>
+                
+                <div id="alertsPanel" class="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                     <div class="p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 text-center italic">
-                        Esperando datos para diagnóstico...
+                        Esperando datos para evaluación térmica...
                     </div>
                 </div>
             </div>
@@ -237,523 +269,27 @@
     </main>
 
     <!-- BITÁCORA INFERIOR -->
-    <footer class="h-48 glass-panel border-t border-slate-700 flex flex-col z-10">
-        <div class="flex justify-between items-center px-4 py-2 border-b border-slate-700 bg-slate-800/50">
-            <h3 class="text-sm font-bold text-slate-300 tracking-wider">BITÁCORA DE CONTROL</h3>
-            <button onclick="exportCSV()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white py-1 px-3 rounded flex items-center gap-1 transition">
-                <i data-lucide="download" class="w-3 h-3"></i> Exportar CSV
+    <footer class="h-48 glass-panel border-t border-slate-700 flex flex-col z-10 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">
+        <div class="flex justify-between items-center px-5 py-2 border-b border-slate-700 bg-slate-800/80">
+            <h3 class="text-sm font-bold text-slate-300 tracking-widest flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-orange-400"></i> BITÁCORA INMUTABLE DE EVENTOS
+            </h3>
+            <button onclick="exportCSV()" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-1.5 px-4 rounded-md flex items-center gap-2 transition shadow border border-slate-600">
+                <i data-lucide="download" class="w-4 h-4"></i> EXPORTAR LOGS (.CSV)
             </button>
         </div>
-        <div class="flex-1 overflow-auto p-0">
-            <table class="w-full text-sm text-left">
-                <thead class="text-xs text-slate-400 uppercase bg-slate-800 sticky top-0">
+        <div class="flex-1 overflow-auto p-0 relative">
+            <table class="w-full text-sm text-left whitespace-nowrap">
+                <thead class="text-xs text-slate-400 uppercase bg-slate-900 sticky top-0 z-20 shadow-sm">
                     <tr>
-                        <th class="px-4 py-2">Hora</th>
-                        <th class="px-4 py-2">Operador</th>
-                        <th class="px-4 py-2 text-orange-400">T. Interna (°C)</th>
-                        <th class="px-4 py-2">Origen</th>
-                        <th class="px-4 py-2 text-blue-400">Draft</th>
-                        <th class="px-4 py-2">Fase/Posición</th>
-                        <th class="px-4 py-2">Diagnóstico Guardado</th>
+                        <th class="px-5 py-3 font-semibold">Hora</th>
+                        <th class="px-5 py-3 font-semibold">Evento / Operador</th>
+                        <th class="px-5 py-3 font-semibold text-orange-400">Temp Int. (°C)</th>
+                        <th class="px-5 py-3 font-semibold">Origen</th>
+                        <th class="px-5 py-3 font-semibold text-blue-400">Draft (mmca)</th>
+                        <th class="px-5 py-3 font-semibold">Ángulo</th>
+                        <th class="px-5 py-3 font-semibold">Fase</th>
+                        <th class="px-5 py-3 font-semibold w-full">Diagnóstico / Nota</th>
                     </tr>
                 </thead>
-                <tbody id="logTableBody" class="divide-y divide-slate-700">
-                    <!-- Registros de la bitacora -->
-                </tbody>
-            </table>
-        </div>
-    </footer>
-
-    <script>
-        // CONFIGURACIÓN MAESTRA
-        const CONST_PIN = "1407";
-        const REFRACTORY_RATIO = 3.5;
-        const ROTATION_ANGLES = [0, 90, 180, 270];
-        
-        // ESTADO GLOBAL
-        let state = {
-            globalSeconds: 0,
-            turnSeconds: 3600, // Inicializado para fase 1 (60 min)
-            currentAngleIndex: 0,
-            isRunning: false,
-            mode: 'TC', // 'TC' o 'LASER'
-            logs: [],
-            currentTi: null,
-            currentDraft: null
-        };
-
-        // FASES CONFIG
-        const PHASES = [
-            { id: 1, name: "FASE 1", maxSecs: 24*3600, tempMin: 120, tempMax: 150, turnMins: 60, draftMin: -1.0, draftMax: -2.5 },
-            { id: 2, name: "FASE 2", maxSecs: 72*3600, tempMin: 320, tempMax: 350, turnMins: 30, draftMin: -1.2, draftMax: -2.5 },
-            { id: 3, name: "FASE 3", maxSecs: 120*3600, tempMin: 600, tempMax: 650, turnMins: 15, draftMin: -1.5, draftMax: -2.5 }
-        ];
-
-        let timerInterval = null;
-        let absoluteRotation = 0; // Para animación continua sin saltos
-
-        // INICIALIZACIÓN
-        function init() {
-            lucide.createIcons();
-            loadState();
-            updateUI();
-            renderLogs();
-            if (state.isRunning) startTimerInterval();
-        }
-
-        // --- SEGURIDAD Y AUTH ---
-        function checkPIN() {
-            const pin = document.getElementById('pinInput').value;
-            if (pin === CONST_PIN) {
-                document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
-                setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
-            } else {
-                const err = document.getElementById('pinError');
-                err.classList.remove('hidden');
-                setTimeout(() => err.classList.add('hidden'), 2000);
-                document.getElementById('pinInput').value = '';
-            }
-        }
-
-        // Permitir Enter en el PIN
-        document.getElementById('pinInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') checkPIN();
-        });
-
-        function verifySupervisor() {
-            return prompt("Ingrese PIN de supervisor para autorizar esta acción:") === CONST_PIN;
-        }
-
-        // --- PERSISTENCIA (LOCALSTORAGE) ---
-        function saveState() {
-            localStorage.setItem('otm120h_state', JSON.stringify(state));
-        }
-
-        function loadState() {
-            const saved = localStorage.getItem('otm120h_state');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    state = { ...state, ...parsed };
-                } catch(e) { console.error("Error cargando estado", e); }
-            }
-            absoluteRotation = state.currentAngleIndex * 90; // Sincronizar posición gráfica
-        }
-
-        // --- LÓGICA DE TIEMPOS Y FASES ---
-        function toggleGlobalTimer() {
-            state.isRunning = !state.isRunning;
-            if (state.isRunning) {
-                startTimerInterval();
-            } else {
-                clearInterval(timerInterval);
-            }
-            saveState();
-            updateTimerControls();
-        }
-
-        function startTimerInterval() {
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                state.globalSeconds++;
-                if (state.turnSeconds > 0) {
-                    state.turnSeconds--;
-                } else if(state.turnSeconds === 0) {
-                    triggerTurnAlarm();
-                    state.turnSeconds = -1; // Evitar multiples alarmas
-                }
-                saveState(); // Auto-save cada segundo
-                updateTimeDisplay();
-            }, 1000);
-            updateTimerControls();
-        }
-
-        function resetGlobalTimer() {
-            if (!verifySupervisor()) {
-                alert("PIN Incorrecto. Acción cancelada.");
-                return;
-            }
-            if (confirm("¡ADVERTENCIA CRÍTICA! ¿Está seguro de reiniciar todo el cronograma de 120 horas?")) {
-                state.globalSeconds = 0;
-                state.isRunning = false;
-                state.currentAngleIndex = 0;
-                clearInterval(timerInterval);
-                const phase = getCurrentPhase();
-                state.turnSeconds = phase.turnMins * 60;
-                saveState();
-                updateUI();
-            }
-        }
-
-        function getCurrentPhase() {
-            if (state.globalSeconds < PHASES[0].maxSecs) return PHASES[0];
-            if (state.globalSeconds < PHASES[1].maxSecs) return PHASES[1];
-            return PHASES[2]; // O finalizado si > 120h
-        }
-
-        // --- AUDIO Y ALARMAS ---
-        function triggerTurnAlarm() {
-            // Beep usando AudioContext nativo (No requiere archivos externos)
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, ctx.currentTime); // Nota La
-            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
-            
-            gain.gain.setValueAtTime(1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-            
-            osc.start(ctx.currentTime);
-            osc.stop(ctx.currentTime + 0.5);
-
-            // Alerta visual
-            const kilnSvg = document.getElementById('kilnGraphic').querySelector('svg');
-            kilnSvg.classList.replace('drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]', 'drop-shadow-[0_0_25px_rgba(239,68,68,0.8)]');
-        }
-
-        function resetTurn() {
-            state.currentAngleIndex = (state.currentAngleIndex + 1) % ROTATION_ANGLES.length;
-            absoluteRotation += 90; // Incrementar rotación absoluta
-            const phase = getCurrentPhase();
-            state.turnSeconds = phase.turnMins * 60;
-            saveState();
-            
-            // Reset visuales alarma
-            const kilnSvg = document.getElementById('kilnGraphic').querySelector('svg');
-            kilnSvg.classList.replace('drop-shadow-[0_0_25px_rgba(239,68,68,0.8)]', 'drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]');
-            
-            updateCompassVisuals();
-            updateTimeDisplay();
-        }
-
-        // --- ACTUALIZACIÓN DE UI ---
-        function updateTimeDisplay() {
-            // Global
-            const h = Math.floor(state.globalSeconds / 3600);
-            const m = Math.floor((state.globalSeconds % 3600) / 60);
-            const s = state.globalSeconds % 60;
-            document.getElementById('globalTimer').innerText = 
-                `${h.toString().padStart(3, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-
-            // Turn
-            if(state.turnSeconds >= 0) {
-                const tm = Math.floor(state.turnSeconds / 60);
-                const ts = state.turnSeconds % 60;
-                document.getElementById('turnTimer').innerText = 
-                    `${tm.toString().padStart(2, '0')}:${ts.toString().padStart(2, '0')}`;
-                document.getElementById('turnTimer').classList.replace('text-red-500', 'text-yellow-400');
-            } else {
-                document.getElementById('turnTimer').innerText = "¡GIRAR AHORA!";
-                document.getElementById('turnTimer').classList.replace('text-yellow-400', 'text-red-500');
-            }
-
-            updatePhaseInfo();
-        }
-
-        function updateTimerControls() {
-            const btn = document.getElementById('btnToggleTimer');
-            const icon = document.getElementById('iconTimer');
-            const text = document.getElementById('textTimer');
-            if (state.isRunning) {
-                btn.classList.replace('bg-slate-700', 'bg-orange-600');
-                btn.classList.replace('hover:bg-slate-600', 'hover:bg-orange-500');
-                icon.setAttribute('data-lucide', 'pause');
-                text.innerText = "Pausar";
-            } else {
-                btn.classList.replace('bg-orange-600', 'bg-slate-700');
-                btn.classList.replace('hover:bg-orange-500', 'hover:bg-slate-600');
-                icon.setAttribute('data-lucide', 'play');
-                text.innerText = "Reanudar";
-            }
-            lucide.createIcons();
-        }
-
-        function updatePhaseInfo() {
-            const phase = getCurrentPhase();
-            document.getElementById('phaseBadge').innerText = phase.name;
-            document.getElementById('targetTemp').innerText = `${phase.tempMin}-${phase.tempMax}`;
-            document.getElementById('targetDraft').innerText = `${phase.draftMin} a ${phase.draftMax}`;
-            document.getElementById('targetTurn').innerText = phase.turnMins;
-        }
-
-        function updateCompassVisuals() {
-            const deg = ROTATION_ANGLES[state.currentAngleIndex];
-            document.getElementById('turnDeg').innerText = `${deg}°`;
-            document.getElementById('kilnGraphic').style.transform = `rotate(${absoluteRotation}deg)`;
-        }
-
-        function updateUI() {
-            updateTimeDisplay();
-            updateTimerControls();
-            updateCompassVisuals();
-            setMode(state.mode); // Restaurar UI del modo
-        }
-
-        // --- LÓGICA DE INGRESO Y CÁLCULOS ---
-        function setMode(mode) {
-            state.mode = mode;
-            const btnTC = document.getElementById('btnModeTC');
-            const btnLaser = document.getElementById('btnModeLaser');
-            const divTC = document.getElementById('tcInput');
-            const divLaser = document.getElementById('laserInputs');
-
-            if (mode === 'TC') {
-                btnTC.className = "px-4 py-1 rounded-md text-sm font-bold bg-orange-600 text-white transition";
-                btnLaser.className = "px-4 py-1 rounded-md text-sm font-bold text-slate-400 hover:text-white transition";
-                divTC.classList.remove('hidden');
-                divLaser.classList.add('hidden');
-                document.getElementById('tiType').innerText = "(Medida Directa)";
-            } else {
-                btnLaser.className = "px-4 py-1 rounded-md text-sm font-bold bg-orange-600 text-white transition";
-                btnTC.className = "px-4 py-1 rounded-md text-sm font-bold text-slate-400 hover:text-white transition";
-                divLaser.classList.remove('hidden');
-                divTC.classList.add('hidden');
-                document.getElementById('tiType').innerText = `(Calculada: Promedio x ${REFRACTORY_RATIO})`;
-            }
-            calculateTi();
-            saveState();
-        }
-
-        function calculateTi() {
-            let tempFinal = null;
-            let val1=0, val2=0, val3=0;
-
-            if (state.mode === 'TC') {
-                const val = parseFloat(document.getElementById('inpTC').value);
-                if (!isNaN(val)) tempFinal = val;
-            } else {
-                val1 = parseFloat(document.getElementById('inpL1').value);
-                val2 = parseFloat(document.getElementById('inpL2').value);
-                val3 = parseFloat(document.getElementById('inpL3').value);
-                
-                if (!isNaN(val1) && !isNaN(val2) && !isNaN(val3)) {
-                    const prom = (val1 + val2 + val3) / 3;
-                    tempFinal = prom * REFRACTORY_RATIO;
-                }
-            }
-
-            const display = document.getElementById('displayTi');
-            if (tempFinal !== null) {
-                state.currentTi = Math.round(tempFinal);
-                display.innerText = state.currentTi;
-            } else {
-                state.currentTi = null;
-                display.innerText = "---";
-            }
-            runDiagnostics(val1, val3);
-        }
-
-        function updateDraftDisplay() {
-            const val = parseFloat(document.getElementById('inpDraft').value);
-            const display = document.getElementById('displayDraft');
-            if (!isNaN(val)) {
-                state.currentDraft = val;
-                display.innerText = val.toFixed(1);
-            } else {
-                state.currentDraft = null;
-                display.innerText = "--";
-            }
-            runDiagnostics();
-        }
-
-        // --- SISTEMA EXPERTO E IA MONITOR ---
-        function runDiagnostics(l1 = 0, l3 = 0) {
-            const panel = document.getElementById('alertsPanel');
-            panel.innerHTML = '';
-            let alerts = [];
-
-            if (state.currentTi === null && state.currentDraft === null) {
-                panel.innerHTML = '<div class="p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 text-center italic">Esperando datos para diagnóstico...</div>';
-                return;
-            }
-
-            const phase = getCurrentPhase();
-
-            // 1. Sanity Checks (Límites de cordura)
-            if (state.currentTi !== null && state.currentTi > 1200) {
-                 alerts.push({ type: 'critical', icon: 'alert-triangle', text: '¡ALERTA CRÍTICA! Temperatura Excesiva. Revise sensores inmediatamente.'});
-            }
-
-            // 2. Lógica de Draft
-            if (state.currentDraft !== null) {
-                if (state.currentDraft > 0) {
-                     alerts.push({ type: 'critical', icon: 'siren', text: 'PELIGRO: PRESIÓN POSITIVA. Riesgo inminente de fogonazo. Abra Dámper/Ventilador 100%.'});
-                } else if (state.currentDraft > phase.draftMin) {
-                    // ej. -0.5 > -1.0
-                    alerts.push({ type: 'warning', icon: 'wind', text: `Tiro Bajo / Riesgo de Retroceso (${state.currentDraft}). Sugerencia: <b>Abrir Dámper</b>.`});
-                } else if (state.currentDraft < phase.draftMax) {
-                    // ej. -3.0 < -2.5
-                    alerts.push({ type: 'warning', icon: 'wind', text: `Tiro Excesivo (${state.currentDraft}). Pérdida de calor. Sugerencia: <b>Cerrar Dámper</b>.`});
-                } else {
-                    alerts.push({ type: 'success', icon: 'check-circle', text: 'Draft en rango ideal para la fase.'});
-                }
-            }
-
-            // 3. Efecto Banana (Solo en modo Laser)
-            if (state.mode === 'LASER' && l1 > 0 && l3 > 0) {
-                const diff = Math.abs(l1 - l3);
-                if (diff > 80) {
-                    alerts.push({ type: 'danger', icon: 'activity', text: `¡EFECTO BANANA DETECTADO! Diferencial L1-L3 es de ${Math.round(diff)}°C (>80°C). Ajuste quemador o revise carga.`});
-                }
-            }
-
-            // 4. Lógica Térmica
-            if (state.currentTi !== null) {
-                if (state.currentTi < phase.tempMin) {
-                    alerts.push({ type: 'warning', icon: 'thermometer-snow', text: `Temperatura Baja (${state.currentTi}°C vs ${phase.tempMin}°C min). Sugerencia: <b>Aumentar Combustible</b>.`});
-                } else if (state.currentTi > phase.tempMax) {
-                    alerts.push({ type: 'warning', icon: 'thermometer-sun', text: `Temperatura Alta (${state.currentTi}°C vs ${phase.tempMax}°C max). Sugerencia: <b>Reducir Combustible</b>.`});
-                } else {
-                    alerts.push({ type: 'success', icon: 'check-circle', text: 'Temperatura en rango objetivo.'});
-                }
-            }
-
-            // Render Alerts
-            alerts.forEach(al => {
-                let colorClass = 'bg-slate-800 text-slate-300 border-slate-700';
-                let iconColor = 'text-slate-400';
-                
-                if(al.type === 'critical') { colorClass = 'bg-red-900/50 text-red-200 border-red-700 animate-pulse'; iconColor = 'text-red-400'; }
-                if(al.type === 'danger') { colorClass = 'bg-orange-900/50 text-orange-200 border-orange-700'; iconColor = 'text-orange-400'; }
-                if(al.type === 'warning') { colorClass = 'bg-yellow-900/40 text-yellow-200 border-yellow-700'; iconColor = 'text-yellow-400'; }
-                if(al.type === 'success') { colorClass = 'bg-green-900/30 text-green-300 border-green-800'; iconColor = 'text-green-400'; }
-
-                panel.innerHTML += `
-                    <div class="p-3 border rounded-lg text-sm flex gap-3 items-start ${colorClass}">
-                        <i data-lucide="${al.icon}" class="w-5 h-5 shrink-0 ${iconColor}"></i>
-                        <span>${al.text}</span>
-                    </div>
-                `;
-            });
-            lucide.createIcons();
-            
-            // Retornar resumen para log
-            const dangerAlert = alerts.find(a => a.type === 'critical' || a.type === 'danger' || a.type === 'warning');
-            return dangerAlert ? dangerAlert.text.replace(/<\/?[^>]+(>|$)/g, "") : "Parámetros en norma";
-        }
-
-        // --- REGISTRO Y EXPORTACIÓN ---
-        function registrarDato() {
-            const opName = document.getElementById('opName').value.trim();
-            const opShift = document.getElementById('opShift').value;
-
-            if (!opName || !opShift) {
-                alert("Validación Fallida: Ingrese Nombre del Operador y Turno.");
-                return;
-            }
-
-            if (state.currentTi === null || state.currentTi === 0) {
-                alert("Validación Fallida: Temperatura no válida (0 o vacía).");
-                return;
-            }
-
-            if (state.currentDraft === null) {
-                alert("Validación Fallida: Debe ingresar valor de Draft.");
-                return;
-            }
-
-            const diagnostico = runDiagnostics(); // Obtener el texto limpio
-            const now = new Date(); // Sello de tiempo inmutable
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            const logEntry = {
-                timestamp: now.toISOString(),
-                timeStr: timeStr,
-                operator: `${opName} (${opShift})`,
-                ti: state.currentTi,
-                source: state.mode,
-                draft: state.currentDraft,
-                phase: getCurrentPhase().name,
-                position: ROTATION_ANGLES[state.currentAngleIndex],
-                diag: diagnostico
-            };
-
-            state.logs.unshift(logEntry); // Insertar al inicio
-            saveState();
-            renderLogs();
-
-            // Clear inputs
-            document.getElementById('inpTC').value = '';
-            document.getElementById('inpL1').value = '';
-            document.getElementById('inpL2').value = '';
-            document.getElementById('inpL3').value = '';
-            document.getElementById('inpDraft').value = '';
-            state.currentTi = null;
-            state.currentDraft = null;
-            calculateTi();
-            updateDraftDisplay();
-            
-            // Feedback visual
-            const btn = document.querySelector('button[onclick="registrarDato()"]');
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> GUARDADO';
-            btn.classList.replace('bg-green-600', 'bg-emerald-500');
-            lucide.createIcons();
-            setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.classList.replace('bg-emerald-500', 'bg-green-600');
-                lucide.createIcons();
-            }, 2000);
-        }
-
-        function renderLogs() {
-            const tbody = document.getElementById('logTableBody');
-            tbody.innerHTML = '';
-            
-            state.logs.forEach(log => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-700/50 transition-colors';
-                
-                let diagColor = 'text-slate-300';
-                if(log.diag.includes('PELIGRO') || log.diag.includes('CRÍTICA') || log.diag.includes('BANANA')) diagColor = 'text-red-400 font-bold';
-                else if(log.diag.includes('Sugerencia')) diagColor = 'text-yellow-400';
-                else if(log.diag.includes('norma')) diagColor = 'text-green-400';
-
-                tr.innerHTML = `
-                    <td class="px-4 py-2 font-mono text-slate-300">${log.timeStr}</td>
-                    <td class="px-4 py-2 text-slate-200">${log.operator}</td>
-                    <td class="px-4 py-2 font-bold text-orange-400">${log.ti}</td>
-                    <td class="px-4 py-2 text-xs text-slate-400">${log.source}</td>
-                    <td class="px-4 py-2 font-bold text-blue-400">${log.draft}</td>
-                    <td class="px-4 py-2 text-xs text-slate-400">${log.phase} / ${log.position}°</td>
-                    <td class="px-4 py-2 text-xs truncate max-w-xs ${diagColor}" title="${log.diag}">${log.diag}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function exportCSV() {
-            if (state.logs.length === 0) {
-                alert("No hay datos para exportar.");
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Fecha ISO,Hora,Operador,Temperatura Interna (C),Origen,Draft (mmca),Fase,Posicion (grados),Diagnostico\n";
-
-            state.logs.forEach(row => {
-                // Limpiar comas del diagnostico para no romper el CSV
-                const cleanDiag = row.diag.replace(/,/g, " - ");
-                const csvRow = `${row.timestamp},${row.timeStr},${row.operator},${row.ti},${row.source},${row.draft},${row.phase},${row.position},${cleanDiag}`;
-                csvContent += csvRow + "\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `OTM120H_Log_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // Arrancar
-        window.onload = init;
-
-    </script>
-</body>
-</html>
+                <tbody id="logTableBody" class="divide-y divide-s
