@@ -1,327 +1,50 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>OTM 120H - V6.1 Industrial</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OTM 120H - MASTER V5.5</title>
+    <style>
+        :root { --bg: #0a0a0a; --card: #161616; --accent: #ff6600; --blue: #00aaff; --text: #e0e0e0; --red: #ff3333; --green: #00ff88; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #222; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h1 { color: var(--accent); font-size: 1.1rem; text-align: center; letter-spacing: 2px; margin: 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        /* LOGIN SEGURO */
+        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+        .pin-box { background: var(--card); border: 2px solid var(--accent); padding: 30px; border-radius: 20px; text-align: center; width: 80%; max-width: 300px; }
+        
+        /* TI DISPLAY GIGANTE */
+        .ti-label { text-align: center; font-size: 0.8rem; color: #888; letter-spacing: 1px; }
+        .ti-display { font-size: 5.5rem; font-weight: 900; color: var(--accent); text-align: center; line-height: 1; margin: 10px 0; text-shadow: 0 0 25px rgba(255,102,0,0.4); }
+        
+        /* GIRO Y DRAFT */
+        .compass { width: 90px; height: 90px; border: 3px solid var(--accent); border-radius: 50%; margin: 10px auto; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); color: var(--accent); }
+        .btn-giro { width: 100%; padding: 10px; background: #252525; color: white; border: 1px solid #444; border-radius: 6px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
 
-<style>
-body{margin:0;background:#0f0f0f;color:#eee;font-family:Arial}
-header{background:#181818;padding:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-input,select,button{padding:6px;background:#222;color:#fff;border:1px solid #444}
-button:hover{background:#333}
-.main{padding:20px}
-.ti-display{font-size:70px;text-align:center;color:orange;margin:20px 0}
-.panel{background:#181818;padding:15px;margin-bottom:15px}
-.green{color:#00ff7f}
-.yellow{color:yellow}
-.red{color:#ff4d4d}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{border:1px solid #333;padding:4px}
-.lock-screen{
-position:fixed;top:0;left:0;width:100%;height:100%;
-background:#000;display:flex;justify-content:center;align-items:center;flex-direction:column
-}
-.hidden{display:none}
-.compass{margin-top:10px}
-</style>
+        /* INPUTS INDUSTRIALES */
+        input { background: #1a1a1a; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 1.1rem; margin-top: 8px; }
+        input:focus { border-color: var(--accent); outline: none; background: #222; }
+        .mode-selector { display: flex; gap: 8px; margin-bottom: 12px; }
+        .mode-btn { flex: 1; padding: 12px; border: 1px solid #333; background: #1a1a1a; color: #666; border-radius: 8px; font-weight: bold; }
+        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 0 10px rgba(255,102,0,0.3); }
+        
+        button.save { width: 100%; padding: 18px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 900; font-size: 1.2rem; margin-top: 15px; cursor: pointer; }
+        
+        /* ALERTAS */
+        .alert-area { min-height: 20px; color: var(--red); font-weight: bold; text-align: center; font-size: 0.85rem; margin-top: 5px; }
+        .draft-status { font-size: 0.7rem; font-weight: bold; margin-top: 5px; }
 
+        /* BITÁCORA */
+        .log-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 10px; }
+        .log-table th { color: var(--blue); text-align: left; padding: 8px 5px; border-bottom: 2px solid #333; }
+        .log-table td { padding: 10px 5px; border-bottom: 1px solid #222; }
+    </style>
 </head>
 <body>
 
-<div id="lock" class="lock-screen">
-<h2>🔒 Sistema OTM 120H</h2>
-<input type="password" id="pin" placeholder="PIN 1407">
-<button onclick="verificarPIN()">Ingresar</button>
-<p id="pinMsg" class="red"></p>
-</div>
-
-<header>
-Operador: <input id="operador">
-Turno: <input id="turno">
-<button onclick="guardarRegistro()">Guardar</button>
-<button onclick="exportarCSV()">Exportar CSV</button>
-</header>
-
-<div class="main">
-
-<div class="ti-display" id="tiDisplay">0 °C</div>
-
-<div class="panel">
-Modo:
-<select id="modo" onchange="actualizarModo()">
-<option value="tc">Termocupla</option>
-<option value="laser">Pistola Láser</option>
-</select>
-
-<div id="tcFields">
-<input type="number" id="tcTemp" placeholder="Temp TC">
-</div>
-
-<div id="laserFields" class="hidden">
-<input type="number" id="l1" placeholder="L1 Carga">
-<input type="number" id="l2" placeholder="L2 Centro">
-<input type="number" id="l3" placeholder="L3 Descarga">
-</div>
-
-Draft: <input type="number" id="draft" step="0.1">
-</div>
-
-<div class="panel">
-<strong>Fase:</strong> <span id="fase"></span><br>
-<strong>Frecuencia:</strong> <span id="frecuencia"></span><br>
-<strong>Giro en:</strong> <span id="giroTimer"></span><br>
-
-<div class="compass">
-Posición: <span id="posicion">0°</span>
-<button onclick="girar()">Girar 90°</button>
-</div>
-
-<strong>Alerta:</strong> <span id="alerta"></span>
-</div>
-
-<div class="panel">
-<strong>Bitácora</strong>
-<table>
-<thead>
-<tr>
-<th>Hora</th>
-<th>Operador</th>
-<th>Ti</th>
-<th>Origen</th>
-<th>Draft</th>
-<th>Frecuencia</th>
-</tr>
-</thead>
-<tbody id="tabla"></tbody>
-</table>
-</div>
-
-</div>
-
-<script>
-
-const FACTOR = 3.5;
-let logs = JSON.parse(localStorage.getItem("logs")) || [];
-let inicio = localStorage.getItem("inicio") || Date.now();
-localStorage.setItem("inicio", inicio);
-
-let giroInicio = Date.now();
-let posicion = 0;
-
-/* ---------------- PIN ---------------- */
-
-function verificarPIN(){
-let p = document.getElementById("pin").value;
-if(p === "1407"){
-document.getElementById("lock").style.display = "none";
-}else{
-document.getElementById("pinMsg").innerText = "PIN incorrecto";
-}
-}
-
-/* ---------------- MODOS ---------------- */
-
-function actualizarModo(){
-let m = document.getElementById("modo").value;
-document.getElementById("tcFields").classList.toggle("hidden", m !== "tc");
-document.getElementById("laserFields").classList.toggle("hidden", m !== "laser");
-}
-
-function calcularTi(){
-let m = document.getElementById("modo").value;
-
-if(m === "tc"){
-return parseFloat(document.getElementById("tcTemp").value) || 0;
-}
-
-let a = parseFloat(document.getElementById("l1").value) || 0;
-let b = parseFloat(document.getElementById("l2").value) || 0;
-let c = parseFloat(document.getElementById("l3").value) || 0;
-
-return ((a+b+c)/3) * FACTOR;
-}
-
-/* ---------------- FASES ---------------- */
-
-function calcularFase(){
-let horas = (Date.now() - inicio) / 1000 / 3600;
-
-if(horas < 24) return 1;
-if(horas < 72) return 2;
-return 3;
-}
-
-function rangoFase(f){
-if(f === 1) return [120,150];
-if(f === 2) return [320,350];
-return [600,650];
-}
-
-function giroIntervalo(f){
-if(f === 1) return 60;
-if(f === 2) return 30;
-return 15;
-}
-
-function frecuenciaBase(f){
-let horas = (Date.now() - inicio) / 1000 / 3600;
-if(f === 1 && horas < 6) return 15;
-return 30;
-}
-
-/* ---------------- EVALUACIÓN ---------------- */
-
-function evaluarSistema(ti, draft){
-let f = calcularFase();
-let rango = rangoFase(f);
-let alerta = "";
-let freq = frecuenciaBase(f);
-
-/* Temperatura fuera de rango */
-if(ti < rango[0] || ti > rango[1]){
-alerta = "Temperatura fuera de rango";
-freq = 15;
-}
-
-/* Draft */
-if(draft > -1.0){
-alerta = "Tiro Bajo - Abrir Dámper";
-freq = 15;
-}
-
-/* Efecto Banana */
-let l1 = parseFloat(document.getElementById("l1").value);
-let l3 = parseFloat(document.getElementById("l3").value);
-
-if(!isNaN(l1) && !isNaN(l3)){
-let dif = Math.abs(l1 - l3);
-if(dif > 120){
-alerta = "ALERTA CRÍTICA - Efecto Banana";
-}
-else if(dif > 80){
-alerta = "Advertencia - Efecto Banana";
-}
-}
-
-return {alerta, freq};
-}
-
-/* ---------------- REGISTRO ---------------- */
-
-function guardarRegistro(){
-
-let operador = document.getElementById("operador").value;
-if(!operador){
-alert("Operador requerido");
-return;
-}
-
-let ti = calcularTi();
-if(ti === 0){
-alert("Temperatura inválida");
-return;
-}
-
-let draftVal = parseFloat(document.getElementById("draft").value) || 0;
-let eval = evaluarSistema(ti, draftVal);
-
-let reg = {
-hora: new Date().toLocaleString(),
-operador,
-ti: ti.toFixed(1),
-origen: document.getElementById("modo").value === "tc" ? "TC" : "Láser",
-draft: draftVal,
-freq: eval.freq
-};
-
-logs.push(reg);
-localStorage.setItem("logs", JSON.stringify(logs));
-actualizarTabla();
-}
-
-/* ---------------- TABLA ---------------- */
-
-function actualizarTabla(){
-let tabla = document.getElementById("tabla");
-tabla.innerHTML = "";
-
-logs.slice().reverse().forEach(l=>{
-tabla.innerHTML += `
-<tr>
-<td>${l.hora}</td>
-<td>${l.operador}</td>
-<td>${l.ti}</td>
-<td>${l.origen}</td>
-<td>${l.draft}</td>
-<td>${l.freq}</td>
-</tr>`;
-});
-}
-
-/* ---------------- GIRO ---------------- */
-
-function girar(){
-posicion = (posicion + 90) % 360;
-document.getElementById("posicion").innerText = posicion + "°";
-giroInicio = Date.now();
-}
-
-function beep(){
-let ctx = new (window.AudioContext || window.webkitAudioContext)();
-let osc = ctx.createOscillator();
-osc.connect(ctx.destination);
-osc.start();
-osc.stop(ctx.currentTime + 0.2);
-}
-
-/* ---------------- ACTUALIZACIÓN ---------------- */
-
-function actualizar(){
-
-let ti = calcularTi();
-document.getElementById("tiDisplay").innerText = ti.toFixed(1) + " °C";
-
-let f = calcularFase();
-document.getElementById("fase").innerText = "Fase " + f;
-
-let draftVal = parseFloat(document.getElementById("draft").value) || 0;
-let eval = evaluarSistema(ti, draftVal);
-
-document.getElementById("alerta").innerText = eval.alerta;
-document.getElementById("frecuencia").innerText = eval.freq + " min";
-
-/* Temporizador giro */
-
-let intervalo = giroIntervalo(f) * 60 * 1000;
-let restante = intervalo - (Date.now() - giroInicio);
-
-if(restante <= 0){
-beep();
-giroInicio = Date.now();
-}
-
-document.getElementById("giroTimer").innerText =
-Math.max(0, Math.floor(restante/60000)) + " min";
-
-}
-
-function exportarCSV(){
-let csv = "Hora,Operador,Ti,Origen,Draft,Frecuencia\n";
-logs.forEach(l=>{
-csv += `${l.hora},${l.operador},${l.ti},${l.origen},${l.draft},${l.freq}\n`;
-});
-let blob = new Blob([csv], {type:"text/csv"});
-let a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = "otm120h_v6_logs.csv";
-a.click();
-}
-
-setInterval(actualizar,2000);
-actualizarTabla();
-actualizarModo();
-
-</script>
-
-</body>
-</html>
+    <div id="login-screen">
+        <div class="pin-box">
+            <h2 style="color:var(--accent); margin-bottom:20px;">SEGURIDAD OTM</h2>
+            <input type="password" id="pin"
