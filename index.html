@@ -365,4 +365,227 @@
                 box.innerHTML = `
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L1 Carga</span><input type="number" id="l1" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
-           
+                        <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L2 Centro</span><input type="number" id="l2" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
+                        <div class="bg-black/40 p-3 rounded-2xl text-center"><span class="text-[8px] font-bold text-zinc-600 uppercase">L3 Desc.</span><input type="number" id="l3" class="w-full bg-transparent text-center font-black text-xl outline-none" oninput="process()"></div>
+                    </div>
+                    <div class="flex justify-between items-center px-4 py-2 bg-fuego/5 rounded-xl border border-fuego/10">
+                        <span class="text-[9px] font-black text-fuego uppercase tracking-widest">Promedio Casco (Te)</span>
+                        <span id="te-avg" class="text-xl font-black mono text-fuego">0.0°C</span>
+                    </div>`;
+            }
+        }
+
+        function switchMode() {
+            state.mode = state.mode === 'TC' ? 'Laser' : 'TC';
+            document.getElementById('mode-badge').innerText = `Modo: ${state.mode === 'TC' ? 'Termocupla' : 'Pistola Láser'}`;
+            renderInputs();
+            process();
+        }
+
+        // --- PROCESAMIENTO TÉRMICO ---
+        function process() {
+            const inTc = document.getElementById('in-tc')?.value || 0;
+            const l1 = parseFloat(document.getElementById('l1')?.value) || 0;
+            const l2 = parseFloat(document.getElementById('l2')?.value) || 0;
+            const l3 = parseFloat(document.getElementById('l3')?.value) || 0;
+            const draft = document.getElementById('in-draft').value === "" ? null : parseFloat(document.getElementById('in-draft').value);
+
+            let ti = 0;
+            let te = 0;
+            let deltaAxial = 0;
+
+            if (state.mode === 'TC') {
+                ti = parseFloat(inTc);
+            } else {
+                const casco = [l1, l2, l3].filter(v => v > 0);
+                te = casco.length ? casco.reduce((a,b)=>a+b,0)/casco.length : 0;
+                ti = te * RATIO;
+                deltaAxial = casco.length ? Math.max(...casco) - Math.min(...casco) : 0;
+                if(document.getElementById('te-avg')) document.getElementById('te-avg').innerText = te.toFixed(1) + "°C";
+            }
+
+            document.getElementById('main-ti').innerHTML = `${Math.round(ti)}<span class="text-4xl ml-2 font-black text-zinc-800 italic">°C</span>`;
+            
+            // IA MONITOR
+            const console = document.getElementById('ia-console');
+            console.innerHTML = "";
+            const f = FASES[state.phase];
+            let intensiveTrigger = false;
+
+            // 1. Alerta Banana
+            if (deltaAxial >= LIMITE_BANANA_CRIT) {
+                addAi("🚨 PELIGRO BANANA CRÍTICO: ΔT Axial > "+deltaAxial.toFixed(0)+"°. ¡GIRO CONTINUO!", "text-red-500 font-black animate-pulse");
+                intensiveTrigger = true;
+            } else if (deltaAxial >= LIMITE_BANANA_WARN) {
+                addAi("⚠️ ADVERTENCIA BANANA: Diferencial axial elevado ("+deltaAxial.toFixed(0)+"°).", "text-orange-500");
+                if (deltaAxial > 60) intensiveTrigger = true;
+            }
+
+            // 2. Draft (Inverso)
+            if (draft !== null) {
+                if (draft > f.draft[0]) {
+                    addAi("💨 TIRO BAJO: Riesgo de retroceso de llama. -> ABRIR DÁMPER.", "text-red-500 font-bold");
+                    intensiveTrigger = true;
+                } else if (draft < f.draft[1]) {
+                    addAi("🌬️ EXCESO DE SUCCIÓN: Pérdida de calor. -> CERRAR DÁMPER.", "text-orange-400");
+                }
+            }
+
+            // 3. Alertas Térmicas
+            if (ti > 0) {
+                if (ti < f.temp[0]) addAi("🔥 BAJA TEMP: Incrementar flujo de combustible.", "text-orange-400");
+                else if (ti > f.temp[1]) {
+                    addAi("🛑 ALTA TEMP: Reducir combustible para proteger refractario.", "text-red-500 font-bold");
+                    intensiveTrigger = true;
+                }
+
+                // Salto Térmico (Protección)
+                const jump = Math.abs(ti - state.lastTi);
+                if (jump > LIMITE_SALTO && state.lastTi > 0) {
+                    addAi("📈 SALTO TÉRMICO DETECTADO: Var: "+jump.toFixed(0)+"°C. ¡Estabilizar!", "text-red-600 font-black");
+                    intensiveTrigger = true;
+                }
+            }
+
+            // Gestión de Frecuencia Inteligente
+            if (intensiveTrigger) {
+                state.freqMode = 'INTENSIVE';
+                state.stableCount = 0;
+            }
+
+            if (console.innerHTML === "") addAi("✅ Estabilidad operativa detectada.", "text-emerald-500 opacity-60");
+        }
+
+        function addAi(txt, cls) {
+            const p = document.createElement('p');
+            p.className = cls;
+            p.innerText = txt;
+            document.getElementById('ia-console').appendChild(p);
+        }
+
+        // --- PERSISTENCIA & LOGS ---
+        function confirmRotation() {
+            state.giroDeg = (state.giroDeg + 90) % 360;
+            document.getElementById('compass-dial').style.transform = `rotate(${state.giroDeg}deg)`;
+            document.getElementById('giro-text').innerText = `${state.giroDeg}°`;
+            state.rotSeconds = FASES[state.phase].rot * 60;
+            document.getElementById('rotation-card').classList.remove('alert-active');
+        }
+
+        function saveRecord() {
+            const op = document.getElementById('op_name').value;
+            const punta = document.getElementById('op_punta').value;
+            const ti = parseInt(document.getElementById('main-ti').innerText);
+            const draft = document.getElementById('in-draft').value;
+
+            // Validaciones
+            if (!op || ti === 0) {
+                alert("Validación Fallida: Operador vacío o Temperatura en cero.");
+                return;
+            }
+
+            // Evitar duplicados en el mismo minuto
+            const nowTime = Math.floor(state.seconds / 60);
+            if (nowTime === state.lastSaveTime) {
+                alert("Registro bloqueado: Espere 1 minuto para evitar duplicados.");
+                return;
+            }
+
+            const record = {
+                h: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                t_proc: document.getElementById('master-clock').innerText,
+                op: `${op} [${punta}]`,
+                ti: ti,
+                mode: state.mode,
+                draft: draft || "0",
+                freq: state.freqMode === 'INTENSIVE' ? 'INT' : 'NOR',
+                giro: state.giroDeg + "°"
+            };
+
+            state.logs.unshift(record);
+            state.lastSaveTime = nowTime;
+            state.lastTi = ti;
+
+            // Manejo de regreso a frecuencia normal
+            if (state.freqMode === 'INTENSIVE') {
+                state.stableCount++;
+                if (state.stableCount >= 3) {
+                    state.freqMode = 'NORMAL';
+                    state.stableCount = 0;
+                }
+            }
+
+            saveToLocal();
+            renderLogs();
+            
+            // Limpiar inputs
+            if(document.getElementById('in-tc')) document.getElementById('in-tc').value = "";
+            if(document.getElementById('l1')) {
+                document.getElementById('l1').value = "";
+                document.getElementById('l2').value = "";
+                document.getElementById('l3').value = "";
+            }
+            document.getElementById('in-draft').value = "";
+            process();
+        }
+
+        function renderLogs() {
+            const list = document.getElementById('log-list');
+            list.innerHTML = state.logs.map(l => `
+                <div class="bg-white/5 p-3 rounded-2xl border border-white/5 relative overflow-hidden group">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-zinc-500 font-black">${l.h} | T:${l.t_proc}</span>
+                        <span class="text-fuego font-black text-xs">${l.ti}°C</span>
+                    </div>
+                    <div class="flex justify-between text-[7px] font-bold uppercase tracking-widest text-zinc-400">
+                        <span>${l.op}</span>
+                        <span class="${l.freq === 'INT' ? 'text-orange-500' : 'text-emerald-500'}">F:${l.freq}</span>
+                    </div>
+                    <div class="mt-1 flex gap-2 text-[7px] font-bold text-zinc-600">
+                        <span>DRAFT: ${l.draft}</span>
+                        <span>MODO: ${l.mode}</span>
+                        <span>GIRO: ${l.giro}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveToLocal() {
+            localStorage.setItem('otm_55_sec', state.seconds);
+            localStorage.setItem('otm_55_logs', JSON.stringify(state.logs));
+            localStorage.setItem('otm_55_op', document.getElementById('op_name').value);
+            localStorage.setItem('otm_55_punta', document.getElementById('op_punta').value);
+            
+            // Sync dot indicator
+            const dot = document.getElementById('sync-dot');
+            dot.className = "status-dot bg-emerald-500";
+            document.getElementById('sync-text').innerText = "Sincronizado";
+        }
+
+        function exportCSV() {
+            let csv = "Hora,Total_Proc,Operador,Ti,Modo,Draft,Freq,Giro\n";
+            state.logs.forEach(l => {
+                csv += `${l.h},${l.t_proc},${l.op},${l.ti},${l.mode},${l.draft},${l.freq},${l.giro}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `OTM120H_V55_Report_${Date.now()}.csv`;
+            a.click();
+        }
+
+        function hours() { return state.seconds / 3600; }
+    </script>
+
+    <style>
+        @keyframes pulse-alert {
+            0%, 100% { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+            50% { border-color: #ef4444; background: rgba(239, 68, 68, 0.2); }
+        }
+        .alert-active { animation: pulse-alert 1.5s infinite; }
+        .animate-spin-slow { animation: spin 12s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</body>
+</html>           
