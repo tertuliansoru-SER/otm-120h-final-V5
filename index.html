@@ -3,293 +3,463 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTM 120H - Sistema de Control Maestro V7</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>OTM 120H (V7) - Master Control</title>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid #334155; }
-        .glow-text-orange { text-shadow: 0 0 15px rgba(249, 115, 22, 0.6); }
-        .glow-text-blue { text-shadow: 0 0 15px rgba(56, 189, 248, 0.6); }
-        
-        input[type="number"], input[type="text"], select { background: #1e293b; border: 1px solid #475569; color: white; border-radius: 0.375rem; padding: 0.5rem; width: 100%; outline: none; transition: border-color 0.2s; }
-        input:focus, select:focus { border-color: #f97316; box-shadow: 0 0 0 1px #f97316; }
-        
-        /* Ocultar flechas de los inputs number */
-        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-
-        /* Animación suave para el horno */
-        .kiln-rotation { transition: transform 1s ease-in-out; }
-        
-        /* Efecto de Alarma Crítica */
-        .alarm-flash { animation: flashRed 1s infinite alternate; }
-        @keyframes flashRed {
-            0% { filter: drop-shadow(0 0 15px rgba(249,115,22,0.3)); }
-            100% { filter: drop-shadow(0 0 35px rgba(239,68,68,1)); }
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #1e1e1e;
+            --accent: #00e676;
+            --warning: #ff9100;
+            --danger: #ff5252;
+            --text: #e0e0e0;
         }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Bloqueo de Seguridad */
+        #lock-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        /* Header */
+        header {
+            background: #000;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        /* Dashboard Principal */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 15px;
+            padding: 15px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        /* Brújula de Fase */
+        .phase-compass {
+            border-left: 5px solid var(--accent);
+        }
+
+        .phase-target {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        /* Temperatura Central */
+        .temp-display {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .ti-large {
+            font-size: 8rem;
+            font-weight: 800;
+            color: #fff;
+            text-shadow: 0 0 20px rgba(0, 230, 118, 0.3);
+            margin: 0;
+        }
+
+        /* Gráfico de Horno */
+        #kiln-svg {
+            width: 200px;
+            height: 200px;
+            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .alarm-blink {
+            animation: blink 0.5s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { filter: drop-shadow(0 0 5px red); }
+            to { filter: drop-shadow(0 0 20px red); background: rgba(255,0,0,0.2); }
+        }
+
+        /* Bitácora */
+        .log-container {
+            grid-column: 1 / span 3;
+            max-height: 200px;
+            overflow-y: scroll;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #000; position: sticky; top: 0; }
+        td, th { padding: 8px; border: 1px solid #333; text-align: left; }
+
+        input, select, button {
+            background: #333;
+            border: 1px solid var(--accent);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        button:active { transform: scale(0.98); }
+        .btn-giro { background: #2979ff; border-color: #2979ff; height: 60px; font-size: 1.2em; }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden relative selection:bg-orange-500 selection:text-white">
+<body>
 
-    <!-- PANTALLA DE BLOQUEO (Anti-Sabotaje) -->
-    <div id="loginScreen" class="absolute inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-500">
-        <i data-lucide="shield-alert" class="w-20 h-20 text-orange-500 mb-6 animate-pulse"></i>
-        <h1 class="text-3xl font-bold tracking-widest mb-2">OTM 120H <span class="text-orange-500">V7</span></h1>
-        <p class="text-slate-400 mb-8">SISTEMA DE CONTROL MAESTRO</p>
-        <div class="glass-panel p-8 rounded-xl text-center w-80">
-            <label class="block text-sm font-semibold text-slate-300 mb-4">INGRESE PIN DE ACCESO</label>
-            <input type="password" id="pinInput" class="text-center text-3xl tracking-[0.5em] mb-4 font-mono" maxlength="4" placeholder="••••">
-            <button onclick="checkPIN()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded transition-colors shadow-lg shadow-orange-900/50">DESBLOQUEAR</button>
-            <p id="pinError" class="text-red-400 text-sm mt-3 hidden bg-red-950/50 py-1 rounded">PIN Incorrecto</p>
+<div id="lock-screen">
+    <h2>SISTEMA OTM 120H V7</h2>
+    <p>Ingrese PIN Maestro para Desbloquear</p>
+    <input type="password" id="pin-input" placeholder="****" style="width: 100px; text-align: center; font-size: 1.5em;">
+    <button onclick="unlock()" style="width: 120px;">ENTRAR</button>
+</div>
+
+<header>
+    <div>
+        <strong>S.E.R.A. Industrial</strong> | OTM 120H
+    </div>
+    <div>
+        OP: <input type="text" id="operator-name" placeholder="Nombre Operador" style="width: 150px; margin:0; display:inline;">
+        PUNTA: <select id="shift-select" style="width: 80px; margin:0; display:inline;">
+            <option>A</option><option>B</option><option>C</option>
+        </select>
+    </div>
+</header>
+
+<div class="main-grid">
+    <div class="panel phase-compass">
+        <h3>BRÚJULA DE FASE</h3>
+        <div id="phase-id" class="phase-target">FASE 1: CALENTAMIENTO INICIAL</div>
+        <hr>
+        <p>🎯 T° Objetivo: <span id="target-temp">120-150</span> °C</p>
+        <p>🌪️ Tiro (Draft): <span id="target-draft">-1.0 a -2.5</span> mmca</p>
+        <p>🔄 Frec. Giro: <span id="target-rot">60</span> min</p>
+        <hr>
+        <div id="ia-monitor" style="color: var(--warning); font-size: 0.9em; font-weight: bold;"></div>
+    </div>
+
+    <div class="panel temp-display" id="main-kiln-view">
+        <div id="kiln-container">
+            <svg id="kiln-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" stroke="#666" stroke-width="2" fill="#333" />
+                <circle cx="50" cy="50" r="38" stroke="#8d6e63" stroke-width="4" fill="none" />
+                <circle cx="50" cy="50" r="10" fill="#ffab00" />
+                <rect x="48" y="5" width="4" height="10" fill="var(--accent)" />
+            </svg>
+        </div>
+        <p style="margin-top: 10px;">TEMPERATURA INTERNA ($T_i$)</p>
+        <h1 class="ti-large" id="ti-val">--- °C</h1>
+        <div style="display: flex; justify-content: space-around;">
+            <div>
+                <small>CRONÓMETRO GLOBAL</small>
+                <div id="global-timer" style="font-size: 1.5em; font-weight: bold;">000:00:00</div>
+            </div>
+            <div>
+                <small>PRÓXIMO GIRO</small>
+                <div id="rotation-timer" style="font-size: 1.5em; font-weight: bold; color: var(--warning);">00:00</div>
+            </div>
         </div>
     </div>
 
-    <!-- CABECERA -->
-    <header class="glass-panel px-6 py-3 flex justify-between items-center z-10 border-b border-slate-700">
-        <div class="flex items-center gap-3">
-            <i data-lucide="flame" class="text-orange-500 w-8 h-8"></i>
-            <div>
-                <h1 class="text-xl font-bold tracking-wider">OTM 120H</h1>
-                <div class="flex items-center gap-2 text-xs text-green-400">
-                    <span class="relative flex h-2 w-2">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
-                    <span>Storage Local Activo</span>
-                </div>
-            </div>
-        </div>
-        <div class="flex gap-4 items-center bg-slate-800 p-2 rounded-lg border border-slate-700">
-            <div>
-                <input type="text" id="opName" placeholder="Nombre Operador" class="text-sm w-48 bg-slate-900 border-none" oninput="saveInputs()">
-            </div>
-            <div>
-                <select id="opShift" class="text-sm w-36 bg-slate-900 border-none" onchange="saveInputs()">
-                    <option value="">Turno...</option>
-                    <option value="A">Punta A (Mañana)</option>
-                    <option value="B">Punta B (Tarde)</option>
-                    <option value="C">Punta C (Noche)</option>
-                </select>
-            </div>
-        </div>
-    </header>
+    <div class="panel">
+        <h3>ENTRADA DE DATOS</h3>
+        <label>Modo de Medición:</label>
+        <select id="measure-mode" onchange="toggleInputs()">
+            <option value="TC">Termocupla (Carcasa Fría)</option>
+            <option value="Laser">Pistola Láser (Casco Caliente)</option>
+        </select>
 
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-1 overflow-hidden flex flex-col xl:flex-row gap-4 p-4 z-10">
+        <div id="tc-input-div">
+            <label>$T_{externa}$ Directa:</label>
+            <input type="number" id="t-direct" placeholder="°C">
+        </div>
+
+        <div id="laser-input-div" style="display: none;">
+            <label>$L_1$ (Carga):</label> <input type="number" id="l1-val" placeholder="°C">
+            <label>$L_2$ (Centro):</label> <input type="number" id="l2-val" placeholder="°C">
+            <label>$L_3$ (Descarga):</label> <input type="number" id="l3-val" placeholder="°C">
+        </div>
+
+        <label>Draft (mmca):</label>
+        <input type="number" id="draft-val" step="0.1" placeholder="-1.5">
+
+        <button onclick="recordData()">REGISTRAR PARÁMETROS</button>
+        <button class="btn-giro" onclick="executeRotation()">🔄 REALIZAR GIRO (+90°)</button>
+        <button onclick="exportCSV()" style="background: #555; border: none; font-size: 0.7em;">Descargar CSV</button>
+        <button onclick="resetGlobal()" style="color:red; background:none; border:none; font-size: 0.7em; margin-top:20px;">Reiniciar Global (PIN)</button>
+    </div>
+
+    <div class="panel log-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>HORA</th>
+                    <th>OP</th>
+                    <th>$T_i$ (°C)</th>
+                    <th>ORIGEN</th>
+                    <th>DRAFT</th>
+                    <th>EVENTO / OBSERVACIÓN</th>
+                </tr>
+            </thead>
+            <tbody id="log-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<audio id="beep" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
+<script>
+    // --- Configuración y Estado ---
+    let state = {
+        globalSeconds: 0,
+        rotationSeconds: 3600, // Fase 1 default
+        angle: 0,
+        logs: [],
+        pin: "1407",
+        isLocked: true
+    };
+
+    const PHASES = [
+        { limit: 24, tRange: [120, 150], rot: 60, draft: [-1.0, -2.5], name: "FASE 1: CALENTAMIENTO" },
+        { limit: 72, tRange: [320, 350], rot: 30, draft: [-1.2, -2.5], name: "FASE 2: DESHIDRATACIÓN" },
+        { limit: 120, tRange: [600, 650], rot: 15, draft: [-1.5, -2.5], name: "FASE 3: SINTERIZACIÓN" }
+    ];
+
+    // --- Persistencia ---
+    function save() { localStorage.setItem('otm_v7_state', JSON.stringify(state)); }
+    function load() {
+        const saved = localStorage.getItem('otm_v7_state');
+        if (saved) {
+            state = JSON.parse(saved);
+            renderLogs();
+            rotateVisual(0);
+        }
+    }
+
+    // --- Seguridad ---
+    function unlock() {
+        if (document.getElementById('pin-input').value === state.pin) {
+            document.getElementById('lock-screen').style.display = 'none';
+            state.isLocked = false;
+            startTimers();
+        } else { alert("PIN Incorrecto"); }
+    }
+
+    function resetGlobal() {
+        if (confirm("¿Reiniciar Cronómetro Global? Requiere PIN.") && prompt("PIN:") === state.pin) {
+            state.globalSeconds = 0;
+            save();
+            location.reload();
+        }
+    }
+
+    // --- Lógica Térmica y de Fase ---
+    function getCurrentPhase() {
+        const hours = state.globalSeconds / 3600;
+        return PHASES.find(p => hours < p.limit) || PHASES[2];
+    }
+
+    function toggleInputs() {
+        const mode = document.getElementById('measure-mode').value;
+        document.getElementById('tc-input-div').style.display = mode === 'TC' ? 'block' : 'none';
+        document.getElementById('laser-input-div').style.display = mode === 'Laser' ? 'block' : 'none';
+    }
+
+    // --- Timers ---
+    function startTimers() {
+        setInterval(() => {
+            state.globalSeconds++;
+            if (state.rotationSeconds > 0) {
+                state.rotationSeconds--;
+            } else {
+                triggerAlarm();
+            }
+            updateUI();
+            save();
+        }, 1000);
+    }
+
+    function updateUI() {
+        const phase = getCurrentPhase();
         
-        <!-- COLUMNA IZQUIERDA: Tiempos Globales y Tolerancias (Brújula de Fase) -->
-        <div class="w-full xl:w-1/4 flex flex-col gap-4">
-            <!-- Cronómetro Global -->
-            <div class="glass-panel rounded-xl p-5 flex flex-col items-center shadow-lg">
-                <h2 class="text-slate-400 text-xs font-bold tracking-widest mb-1 uppercase">Cronómetro Global de Curado</h2>
-                <div class="text-slate-500 text-xs mb-3">Límite Total: 120 Horas</div>
-                <div id="globalTimer" class="text-5xl font-mono font-bold glow-text-orange mb-4">000:00:00</div>
-                <div class="flex gap-2 w-full">
-                    <button id="btnToggleTimer" onclick="toggleGlobalTimer()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition uppercase tracking-wider">
-                        <i data-lucide="play" id="iconTimer" class="w-5 h-5"></i> <span id="textTimer">Iniciar</span>
-                    </button>
-                    <button onclick="resetGlobalTimer()" class="bg-red-900 hover:bg-red-800 text-red-200 py-3 px-4 rounded-lg transition" title="Reiniciar Curado Completo">
-                        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
+        // Cronómetros
+        document.getElementById('global-timer').innerText = formatTime(state.globalSeconds, true);
+        document.getElementById('rotation-timer').innerText = formatTime(state.rotationSeconds, false);
+        
+        // Brújula
+        document.getElementById('phase-id').innerText = phase.name;
+        document.getElementById('target-temp').innerText = `${phase.tRange[0]}-${phase.tRange[1]}`;
+        document.getElementById('target-draft').innerText = `${phase.draft[0]} a ${phase.draft[1]}`;
+        document.getElementById('target-rot').innerText = phase.rot;
 
-            <!-- Brújula de Fase (¡INTRANSFERIBLE!) -->
-            <div class="glass-panel rounded-xl p-5 flex-1 border-t-4 border-orange-500 shadow-lg relative overflow-hidden">
-                <i data-lucide="compass" class="absolute -right-4 -bottom-4 w-32 h-32 text-slate-800/30"></i>
-                <div class="flex justify-between items-center mb-6 relative z-10">
-                    <h2 class="text-slate-300 text-sm font-bold tracking-widest uppercase">Brújula de Fase</h2>
-                    <span id="phaseBadge" class="bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">FASE 1</span>
-                </div>
-                <div class="space-y-5 relative z-10">
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                        <span class="text-xs text-slate-400 block uppercase tracking-wider mb-1">Objetivo de Temperatura</span>
-                        <div class="text-2xl font-bold text-orange-400"><span id="targetTemp">120-150</span> <span class="text-base text-slate-400">°C</span></div>
-                    </div>
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                        <span class="text-xs text-slate-400 block uppercase tracking-wider mb-1">Rango Draft Ideal</span>
-                        <div class="text-2xl font-bold text-blue-400"><span id="targetDraft">-1.0 a -2.5</span> <span class="text-base text-slate-400">mmca</span></div>
-                    </div>
-                    <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                        <span class="text-xs text-slate-400 block uppercase tracking-wider mb-1">Frecuencia de Giro</span>
-                        <div class="text-2xl font-bold text-slate-200">Cada <span id="targetTurn" class="text-yellow-400">60</span> <span class="text-base text-slate-400">minutos</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        if (state.rotationSeconds === 0) {
+            document.getElementById('main-kiln-view').classList.add('alarm-blink');
+        } else {
+            document.getElementById('main-kiln-view').classList.remove('alarm-blink');
+        }
+    }
 
-        <!-- COLUMNA CENTRAL: Monitoreo Térmico y Panel de Ingreso -->
-        <div class="w-full xl:w-2/4 flex flex-col gap-4">
-            <!-- Display Principal -->
-            <div class="glass-panel rounded-xl p-8 flex flex-col items-center justify-center flex-1 relative overflow-hidden shadow-lg border border-slate-700">
-                <div class="absolute top-4 left-4 flex items-center gap-2 text-slate-400 text-sm font-bold uppercase tracking-widest">
-                    <i data-lucide="thermometer" class="w-4 h-4"></i> Temperatura Interna <span id="tiType" class="text-orange-500 text-xs ml-1">(TC Directa)</span>
-                </div>
-                
-                <!-- Display Masivo Ti -->
-                <div class="text-[9rem] leading-none font-bold text-white glow-text-orange tabular-nums tracking-tighter" id="displayTi">
-                    ---
-                </div>
-                <span class="text-3xl text-slate-400 mt-2 font-light">°C</span>
-                
-                <div class="absolute bottom-4 right-4 flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-full border border-slate-700 backdrop-blur-sm">
-                    <i data-lucide="wind" class="text-blue-400"></i>
-                    <span class="text-3xl font-bold text-blue-400 glow-text-blue" id="displayDraft">--</span>
-                    <span class="text-slate-400 text-sm">mmca</span>
-                </div>
-            </div>
+    function formatTime(sec, long) {
+        let h = Math.floor(sec / 3600);
+        let m = Math.floor((sec % 3600) / 60);
+        let s = sec % 60;
+        if (long) return `${h.toString().padStart(3, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
 
-            <!-- Panel de Ingreso de Datos -->
-            <div class="glass-panel rounded-xl p-5 shadow-lg border-t-2 border-slate-600">
-                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
-                    <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm flex items-center gap-2">
-                        <i data-lucide="edit-3" class="w-4 h-4"></i> Registro de Variables
-                    </h2>
-                    <div class="flex bg-slate-900 rounded-lg p-1 border border-slate-700 shadow-inner">
-                        <button id="btnModeTC" onclick="setMode('TC')" class="px-5 py-1.5 rounded-md text-sm font-bold bg-orange-600 text-white transition-all shadow-md">TERMOCUPLA</button>
-                        <button id="btnModeLaser" onclick="setMode('LASER')" class="px-5 py-1.5 rounded-md text-sm font-bold text-slate-400 hover:text-white transition-all">LÁSER (Pistola)</button>
-                    </div>
-                </div>
+    // --- Registro y Giro ---
+    function executeRotation() {
+        const op = document.getElementById('operator-name').value || "S/N";
+        state.angle += 90;
+        rotateVisual(90);
+        
+        const phase = getCurrentPhase();
+        state.rotationSeconds = phase.rot * 60;
 
-                <div class="grid grid-cols-4 gap-5">
-                    <!-- Inputs Laser (Cálculo 3.5x) -->
-                    <div id="laserInputs" class="col-span-3 grid grid-cols-3 gap-3 hidden">
-                        <div>
-                            <label class="block text-xs text-slate-400 font-bold mb-1 uppercase">L1: Carga (°C)</label>
-                            <input type="number" id="inpL1" placeholder="Ext. Carga" oninput="calculateTi()" class="text-lg text-center font-mono">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 font-bold mb-1 uppercase">L2: Centro (°C)</label>
-                            <input type="number" id="inpL2" placeholder="Ext. Centro" oninput="calculateTi()" class="text-lg text-center font-mono">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-400 font-bold mb-1 uppercase">L3: Descarga (°C)</label>
-                            <input type="number" id="inpL3" placeholder="Ext. Desc." oninput="calculateTi()" class="text-lg text-center font-mono">
-                        </div>
-                    </div>
-                    
-                    <!-- Input TC (Directo) -->
-                    <div id="tcInput" class="col-span-3">
-                        <label class="block text-xs text-orange-400 font-bold mb-1 uppercase">Lectura Termocupla Interna (°C)</label>
-                        <input type="number" id="inpTC" placeholder="Ingrese lectura TC" class="text-2xl text-center font-mono py-2" oninput="calculateTi()">
-                    </div>
+        const log = {
+            time: new Date().toLocaleTimeString(),
+            op: op,
+            ti: "-",
+            origin: "GIRO",
+            draft: "-",
+            event: `GIRO REALIZADO - Ángulo: ${state.angle % 360}°`
+        };
+        state.logs.unshift(log);
+        renderLogs();
+    }
 
-                    <!-- Draft -->
-                    <div class="col-span-1 border-l border-slate-700 pl-5">
-                        <label class="block text-xs text-blue-400 font-bold mb-1 uppercase">Draft (mmca)</label>
-                        <input type="number" id="inpDraft" placeholder="-1.5" step="0.1" oninput="updateDraftDisplay()" class="text-2xl text-center font-mono py-2">
-                    </div>
-                </div>
+    function rotateVisual(deg) {
+        document.getElementById('kiln-svg').style.transform = `rotate(${state.angle}deg)`;
+    }
 
-                <div class="mt-5">
-                    <button onclick="registrarDatoManual()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-lg flex justify-center items-center gap-2 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                        <i data-lucide="save" class="w-5 h-5"></i> GUARDAR PARÁMETROS EN BITÁCORA
-                    </button>
-                </div>
-            </div>
-        </div>
+    function recordData() {
+        const mode = document.getElementById('measure-mode').value;
+        const op = document.getElementById('operator-name').value || "S/N";
+        const draft = parseFloat(document.getElementById('draft-val').value);
+        let ti = 0;
+        let ext = 0;
 
-        <!-- COLUMNA DERECHA: Animación de Horno y Alertas -->
-        <div class="w-full xl:w-1/4 flex flex-col gap-4">
+        if (mode === 'TC') {
+            ext = parseFloat(document.getElementById('t-direct').value);
+            ti = ext * 3.5;
+        } else {
+            const l1 = parseFloat(document.getElementById('l1-val').value);
+            const l2 = parseFloat(document.getElementById('l2-val').value);
+            const l3 = parseFloat(document.getElementById('l3-val').value);
             
-            <!-- Brújula de Giro (Gráfico de Horno Animado) -->
-            <div class="glass-panel rounded-xl p-5 flex flex-col items-center justify-between relative shadow-lg min-h-[300px]">
-                <div class="w-full flex justify-between items-center mb-2">
-                    <h2 class="text-slate-300 text-sm font-bold tracking-widest uppercase">Rotación del Horno</h2>
-                    <span id="turnDegBadge" class="bg-slate-800 text-slate-300 border border-slate-600 text-xs px-2 py-1 rounded font-mono">Posición: 0°</span>
-                </div>
-                
-                <!-- Contenedor del Horno SVG -->
-                <div class="relative flex items-center justify-center w-40 h-40 my-4">
-                    <div id="kilnGraphicWrapper" class="absolute inset-0 kiln-rotation drop-shadow-[0_0_15px_rgba(249,115,22,0.3)]" style="transform: rotate(0deg);">
-                        <svg viewBox="0 0 100 100" class="w-full h-full">
-                            <!-- Carcasa -->
-                            <circle cx="50" cy="50" r="48" fill="#1e293b" stroke="#0f172a" stroke-width="2"/>
-                            <!-- Refractario -->
-                            <circle cx="50" cy="50" r="40" fill="#334155" stroke="#475569" stroke-width="1" stroke-dasharray="4,2"/>
-                            <!-- Fuego / Calor Interno -->
-                            <circle cx="50" cy="50" r="30" fill="url(#fireGradient)"/>
-                            
-                            <!-- Indicador de Rotación (Muesca naranja) -->
-                            <path d="M 40 2 L 60 2 L 55 12 L 45 12 Z" fill="#f97316"/>
-                            <!-- Remaches visuales -->
-                            <circle cx="50" cy="8" r="2" fill="#0f172a"/>
-                            <circle cx="92" cy="50" r="2" fill="#475569"/>
-                            <circle cx="50" cy="92" r="2" fill="#475569"/>
-                            <circle cx="8" cy="50" r="2" fill="#475569"/>
-                            
-                            <defs>
-                                <radialGradient id="fireGradient" cx="50%" cy="50%" r="50%">
-                                    <stop offset="0%" stop-color="#fef08a"/>
-                                    <stop offset="30%" stop-color="#f97316"/>
-                                    <stop offset="70%" stop-color="#991b1b"/>
-                                    <stop offset="100%" stop-color="#450a0a"/>
-                                </radialGradient>
-                            </defs>
-                        </svg>
-                    </div>
-                    <!-- Overlay texto central -->
-                    <div class="z-10 bg-slate-900/80 backdrop-blur-sm rounded-full w-14 h-14 flex items-center justify-center border-2 border-slate-700 shadow-inner">
-                        <i data-lucide="refresh-cw" class="w-6 h-6 text-orange-500"></i>
-                    </div>
-                </div>
+            // Efecto Banana
+            if (Math.abs(l1 - l3) > 80) alert("⚠️ ALERTA: EFECTO BANANA DETECTADO (Dif. L1/L3 > 80°C)");
+            
+            ext = (l1 + l2 + l3) / 3;
+            ti = ext * 3.5;
+        }
 
-                <div class="w-full text-center bg-slate-800/50 p-3 rounded-lg border border-slate-700 mb-3">
-                    <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Cronómetro de Giro</div>
-                    <div id="turnTimer" class="text-4xl font-mono font-bold text-yellow-400">00:00</div>
-                </div>
-                
-                <!-- Botón de Acción Automática -->
-                <button onclick="executeTurn()" class="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 border border-orange-500">
-                    <i data-lucide="rotate-cw" class="w-5 h-5"></i> REGISTRAR GIRO (+90°)
-                </button>
-            </div>
+        if (isNaN(ti) || ext > 500 || draft > 0) {
+            alert("ERROR: Valores fuera de rango o inválidos.");
+            return;
+        }
 
-            <!-- IA Monitor -->
-            <div class="glass-panel rounded-xl p-5 flex-1 flex flex-col shadow-lg">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-700 pb-2">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="cpu" class="text-purple-400 w-5 h-5"></i>
-                        <h2 class="text-slate-300 font-bold uppercase tracking-wide text-sm">IA Diagnóstico</h2>
-                    </div>
-                    <span class="relative flex h-2 w-2">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                    </span>
-                </div>
-                
-                <div id="alertsPanel" class="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
-                    <div class="p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-slate-400 text-center italic">
-                        Esperando datos para evaluación térmica...
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
+        document.getElementById('ti-val').innerText = `${Math.round(ti)} °C`;
 
-    <!-- BITÁCORA INFERIOR -->
-    <footer class="h-48 glass-panel border-t border-slate-700 flex flex-col z-10 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.3)]">
-        <div class="flex justify-between items-center px-5 py-2 border-b border-slate-700 bg-slate-800/80">
-            <h3 class="text-sm font-bold text-slate-300 tracking-widest flex items-center gap-2">
-                <i data-lucide="clipboard-list" class="w-4 h-4 text-orange-400"></i> BITÁCORA INMUTABLE DE EVENTOS
-            </h3>
-            <button onclick="exportCSV()" class="text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white py-1.5 px-4 rounded-md flex items-center gap-2 transition shadow border border-slate-600">
-                <i data-lucide="download" class="w-4 h-4"></i> EXPORTAR LOGS (.CSV)
-            </button>
-        </div>
-        <div class="flex-1 overflow-auto p-0 relative">
-            <table class="w-full text-sm text-left whitespace-nowrap">
-                <thead class="text-xs text-slate-400 uppercase bg-slate-900 sticky top-0 z-20 shadow-sm">
-                    <tr>
-                        <th class="px-5 py-3 font-semibold">Hora</th>
-                        <th class="px-5 py-3 font-semibold">Evento / Operador</th>
-                        <th class="px-5 py-3 font-semibold text-orange-400">Temp Int. (°C)</th>
-                        <th class="px-5 py-3 font-semibold">Origen</th>
-                        <th class="px-5 py-3 font-semibold text-blue-400">Draft (mmca)</th>
-                        <th class="px-5 py-3 font-semibold">Ángulo</th>
-                        <th class="px-5 py-3 font-semibold">Fase</th>
-                        <th class="px-5 py-3 font-semibold w-full">Diagnóstico / Nota</th>
-                    </tr>
-                </thead>
-                <tbody id="logTableBody" class="divide-y divide-s
+        const log = {
+            time: new Date().toLocaleTimeString(),
+            op: op,
+            ti: Math.round(ti),
+            origin: mode,
+            draft: draft,
+            event: "LECTURA RUTINA"
+        };
+
+        state.logs.unshift(log);
+        renderLogs();
+        checkAlerts(ti, draft);
+    }
+
+    function checkAlerts(ti, draft) {
+        const phase = getCurrentPhase();
+        let msg = "";
+        
+        if (draft > phase.draft[0]) msg += "⚠️ TIRO BAJO (Abrir Dámper) | ";
+        if (draft < phase.draft[1]) msg += "⚠️ TIRO EXCESIVO (Cerrar Dámper) | ";
+        if (ti < phase.tRange[0]) msg += "⚠️ T° BAJA (Subir Quemador)";
+        if (ti > phase.tRange[1]) msg += "⚠️ T° ALTA (Bajar Quemador)";
+        
+        document.getElementById('ia-monitor').innerText = msg;
+    }
+
+    function renderLogs() {
+        const body = document.getElementById('log-body');
+        body.innerHTML = state.logs.map(l => `
+            <tr>
+                <td>${l.time}</td>
+                <td>${l.op}</td>
+                <td>${l.ti}</td>
+                <td>${l.origin}</td>
+                <td>${l.draft}</td>
+                <td>${l.event}</td>
+            </tr>
+        `).join('');
+    }
+
+    function triggerAlarm() {
+        document.getElementById('beep').play();
+    }
+
+    function exportCSV() {
+        let csv = "Hora,Operador,Ti,Origen,Draft,Evento\n";
+        state.logs.forEach(l => {
+            csv += `${l.time},${l.op},${l.ti},${l.origin},${l.draft},${l.event}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.setAttribute('hidden', '');
+        a.setAttribute('href', url);
+        a.setAttribute('download', `BITACORA_OTM120H_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    window.onload = load;
+</script>
+
+</body>
+</html>
