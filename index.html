@@ -3,97 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OTM 120H - Sistema de Control Maestro</title>
+    <title>OTM 120H - MASTER V5+</title>
     <style>
-        :root {
-            --bg: #121212; --card: #1e1e1e; --accent: #ff6600; --text: #e0e0e0;
-            --blue: #00aaff; --green: #00ff88; --red: #ff4444;
-        }
-        body {
-            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text);
-            margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center;
-        }
+        :root { --bg: #0a0a0a; --card: #161616; --accent: #ff6600; --blue: #00aaff; --text: #e0e0e0; --red: #ff3333; }
+        body { font-family: 'Roboto', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 500px; }
-        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
-        h1 { color: var(--accent); font-size: 1.2rem; text-align: center; margin: 5px 0; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #222; }
+        h1 { color: var(--accent); font-size: 1.1rem; text-align: center; letter-spacing: 2px; }
         
-        /* Login */
-        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        input[type="password"], input[type="text"], input[type="number"] { 
-            background: #333; border: 1px solid var(--accent); color: white; padding: 10px; border-radius: 5px; width: 80%; text-align: center; font-size: 1.1rem;
-        }
-
-        /* Dashboard */
-        .ti-display { font-size: 4rem; font-weight: bold; color: var(--accent); text-align: center; display: block; margin: 10px 0; }
-        .ti-sub { font-size: 0.9rem; text-align: center; color: #888; margin-bottom: 10px; }
+        /* LOGIN */
+        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .pin-box { background: var(--card); border: 2px solid var(--accent); padding: 30px; border-radius: 20px; text-align: center; }
         
+        /* DASHBOARD */
+        .ti-display { font-size: 5rem; font-weight: 900; color: var(--accent); text-align: center; text-shadow: 0 0 20px rgba(255,102,0,0.3); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .mode-selector { display: flex; gap: 10px; margin-bottom: 15px; }
-        .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 5px; background: #333; color: white; }
-        .mode-btn.active { background: var(--accent); }
+        
+        /* GIRO Y DRAFT */
+        .compass { width: 80px; height: 80px; border: 3px solid var(--accent); border-radius: 50%; margin: 10px auto; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: 0.5s; }
+        .btn-giro { width: 100%; padding: 8px; background: #333; color: white; border: none; border-radius: 5px; font-size: 0.7rem; }
 
-        .compass { width: 100px; height: 100px; border: 4px solid var(--accent); border-radius: 50%; margin: 10px auto; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: transform 0.5s; }
+        /* INPUTS */
+        input { background: #222; border: 1px solid #444; color: white; padding: 12px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 1rem; margin-top: 8px; }
+        input:focus { border-color: var(--accent); outline: none; }
+        .mode-selector { display: flex; gap: 10px; margin-bottom: 10px; }
+        .mode-btn { flex: 1; padding: 10px; border: 1px solid #444; background: #222; color: #888; border-radius: 6px; }
+        .mode-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
         
-        .log-table { width: 100%; font-size: 0.75rem; border-collapse: collapse; margin-top: 10px; }
-        .log-table th, .log-table td { border-bottom: 1px solid #333; padding: 8px; text-align: left; }
+        button.save { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 15px; box-shadow: 0 4px 15px rgba(255,102,0,0.2); }
         
-        button.action { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; border-radius: 8px; font-weight: bold; margin-top: 10px; }
+        .alert-box { color: var(--red); font-weight: bold; text-align: center; font-size: 0.8rem; height: 20px; margin-top: 5px; }
+        .log-table { width: 100%; font-size: 0.7rem; border-collapse: collapse; margin-top: 10px; }
+        .log-table th { color: var(--blue); text-align: left; padding: 5px; border-bottom: 1px solid #333; }
+        .log-table td { padding: 8px 5px; border-bottom: 1px solid #222; }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <h2 style="color:var(--accent)">SEGURIDAD OTM</h2>
-        <input type="password" id="pin" placeholder="PIN" inputmode="numeric">
-        <button class="action" onclick="checkLogin()">DESBLOQUEAR</button>
+        <div class="pin-box">
+            <h2 style="color:var(--accent); margin-top:0;">SEGURIDAD OTM</h2>
+            <input type="password" id="pin" placeholder="PIN MAESTRO" inputmode="numeric" style="width:120px; font-size:1.5rem;">
+            <button class="save" onclick="checkLogin()">ENTRAR</button>
+        </div>
     </div>
 
     <div class="container" id="main-app" style="display:none;">
-        <h1>SISTEMA DE CONTROL MAESTRO V5+</h1>
+        <h1>SISTEMA MAESTRO OTM 120H</h1>
         
-        <div class="card grid">
-            <div class="phase-box">
-                <div id="fase-label" style="font-weight:bold; color:var(--blue);">Cargando...</div>
-                <div id="fase-range" style="font-size:0.8rem;">---</div>
+        <div class="card grid" style="border-left: 5px solid var(--blue);">
+            <div>
+                <div id="fase-tag" style="font-weight:bold; color:var(--blue); font-size:1.1rem;">Fase 1</div>
+                <div id="fase-range" style="font-size:0.75rem; color:#888;">Objetivo: 120-150°C</div>
             </div>
-            <div class="timer-box" style="text-align:right;">
-                <div id="global-timer" style="font-size:1.2rem; font-family:monospace;">00:00:00</div>
-                <div style="font-size:0.6rem; color:#888;">TIEMPO TOTAL</div>
+            <div style="text-align:right;">
+                <div id="global-timer" style="font-family:monospace; font-size:1.2rem;">00:00:00</div>
+                <div style="font-size:0.6rem; color:#666;">TIEMPO TOTAL CURADO</div>
             </div>
         </div>
 
         <div class="card">
-            <div class="ti-sub">TEMPERATURA INTERNA (Ti)</div>
+            <div style="text-align:center; font-size:0.8rem; color:#888; letter-spacing:1px;">TEMPERATURA INTERNA (Ti)</div>
             <div class="ti-display" id="ti-val">---°C</div>
+            <div id="banana-alert" class="alert-box"></div>
+        </div>
+
+        <div class="card grid">
+            <div style="text-align:center; border-right:1px solid #333;">
+                <div id="compass-ui" class="compass">0°</div>
+                <button class="btn-giro" onclick="doRotate()">MARCAR +90°</button>
+                <div id="next-turn" style="font-size:0.6rem; margin-top:5px; color:var(--green);">Giro: --:--</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:0.7rem; color:#888;">ESTADO DEL DRAFT</div>
+                <div id="draft-icon" style="font-size:1.5rem; margin:10px 0;">--</div>
+                <div id="draft-advice" style="font-size:0.65rem; color:var(--blue); font-weight:bold;">ESPERANDO DATOS</div>
+            </div>
         </div>
 
         <div class="card">
             <div class="mode-selector">
-                <button class="mode-btn active" id="btn-tc" onclick="setMode('TC')">TC</button>
-                <button class="mode-btn" id="btn-laser" onclick="setMode('LASER')">Láser</button>
+                <button class="mode-btn active" id="btn-tc" onclick="setMode('TC')">MODO TC</button>
+                <button class="mode-btn" id="btn-laser" onclick="setMode('LASER')">MODO LÁSER</button>
             </div>
-            <div id="tc-input-group">
-                <input type="number" id="temp-direct" placeholder="Temp. TC (°C)" style="width:92%">
+            
+            <div id="tc-input">
+                <input type="number" id="temp-tc" placeholder="Temp. Termocupla (°C)">
             </div>
-            <div id="laser-input-group" style="display:none;">
+            <div id="laser-input" style="display:none;">
                 <div class="grid">
                     <input type="number" id="l1" placeholder="L1 Carga">
                     <input type="number" id="l2" placeholder="L2 Centro">
                     <input type="number" id="l3" placeholder="L3 Descarga">
                 </div>
             </div>
-            <input type="number" id="draft-val" placeholder="Draft (mmca)" style="width:92%; margin-top:10px;">
-            <input type="text" id="operator" placeholder="Operador" style="width:92%; margin-top:10px;">
-            <button class="action" onclick="saveLog()">REGISTRAR</button>
+            <div class="grid">
+                <input type="number" id="draft-val" placeholder="Draft (mmca)" step="0.1">
+                <input type="text" id="op-name" placeholder="Operador">
+            </div>
+            <button class="save" onclick="saveRecord()">REGISTRAR LECTURA MAESTRA</button>
         </div>
 
-        <div class="card" style="overflow-x:auto;">
+        <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:0.8rem; font-weight:bold;">BITÁCORA</span>
-                <button onclick="exportCSV()" style="font-size:0.6rem; background:#444; color:white; border:none; padding:5px;">CSV</button>
+                <span style="font-size:0.8rem; font-weight:bold;">BITÁCORA OPERATIVA</span>
+                <button onclick="exportCSV()" style="font-size:0.6rem; background:#333; color:white; border:none; padding:4px 8px; border-radius:3px;">EXPORTAR CSV</button>
             </div>
             <table class="log-table">
-                <thead><tr><th>Hora</th><th>Ti</th><th>Modo</th><th>Op.</th></tr></thead>
+                <thead><tr><th>HORA</th><th>Ti</th><th>DRAFT</th><th>OP.</th></tr></thead>
                 <tbody id="log-body"></tbody>
             </table>
         </div>
@@ -102,86 +119,87 @@
     <audio id="beep" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
     <script>
-        let mode = 'TC';
-        let startTime = localStorage.getItem('otm_start') ? parseInt(localStorage.getItem('otm_start')) : Date.now();
+        let mode = 'TC'; let angle = 0;
+        let start = localStorage.getItem('otm_start') ? parseInt(localStorage.getItem('otm_start')) : Date.now();
         let logs = JSON.parse(localStorage.getItem('otm_logs')) || [];
-        if(!localStorage.getItem('otm_start')) localStorage.setItem('otm_start', startTime);
+        if(!localStorage.getItem('otm_start')) localStorage.setItem('otm_start', start);
 
         function checkLogin() {
-            const inputPin = document.getElementById('pin').value.trim();
-            if(inputPin === '1407') {
+            if(document.getElementById('pin').value.trim() === '1407') {
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('main-app').style.display = 'block';
-                initApp();
-            } else {
-                alert('PIN Incorrecto');
-                document.getElementById('pin').value = ""; // Limpia el input sin registrar nada
-            }
+                setInterval(tick, 1000); renderLogs();
+            } else { alert('ACCESO DENEGADO'); document.getElementById('pin').value = ''; }
         }
 
         function setMode(m) {
             mode = m;
             document.getElementById('btn-tc').classList.toggle('active', m === 'TC');
             document.getElementById('btn-laser').classList.toggle('active', m === 'LASER');
-            document.getElementById('tc-input-group').style.display = m === 'TC' ? 'block' : 'none';
-            document.getElementById('laser-input-group').style.display = m === 'LASER' ? 'block' : 'none';
+            document.getElementById('tc-input').style.display = m === 'TC' ? 'block' : 'none';
+            document.getElementById('laser-input').style.display = m === 'LASER' ? 'block' : 'none';
         }
 
-        function initApp() {
-            setInterval(updateTimers, 1000);
-            renderLogs();
-        }
+        function tick() {
+            const diff = Date.now() - start;
+            const h = Math.floor(diff/3600000); const m = Math.floor((diff%3600000)/60000); const s = Math.floor((diff%60000)/1000);
+            document.getElementById('global-timer').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-        function updateTimers() {
-            const diff = Date.now() - startTime;
-            const hours = Math.floor(diff / 3600000);
-            const mins = Math.floor((diff % 3600000) / 60000);
-            const secs = Math.floor((diff % 60000) / 1000);
-            document.getElementById('global-timer').innerText = 
-                `${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-
-            let phase = 1, target = "120-150°C";
-            if(hours >= 24 && hours < 72) { phase = 2; target = "320-350°C"; }
-            else if(hours >= 72) { phase = 3; target = "600-650°C"; }
+            let phase = 1, target = "120-150°C", tint = 60;
+            if(h >= 24 && h < 72) { phase = 2; target = "320-350°C"; tint = 30; }
+            else if(h >= 72) { phase = 3; target = "600-650°C"; tint = 15; }
             
-            document.getElementById('fase-label').innerText = `Fase ${phase}`;
-            document.getElementById('fase-range').innerText = target;
+            document.getElementById('fase-tag').innerText = `Fase ${phase}`;
+            document.getElementById('fase-range').innerText = `Objetivo: ${target}`;
+            
+            let tNext = tint - (m % tint);
+            document.getElementById('next-turn').innerText = `Giro en: ${tNext}m`;
+            if(tNext === tint && s === 0) document.getElementById('beep').play();
         }
 
-        function saveLog() {
-            const op = document.getElementById('operator').value;
-            if(!op) return alert('Operador requerido');
+        function doRotate() {
+            angle = (angle + 90) % 360;
+            document.getElementById('compass-ui').style.transform = `rotate(${angle}deg)`;
+            document.getElementById('compass-ui').innerText = `${angle}°`;
+        }
+
+        function saveRecord() {
+            const op = document.getElementById('op-name').value;
+            const dr = parseFloat(document.getElementById('draft-val').value);
+            if(!op || isNaN(dr)) return alert('DATOS INCOMPLETOS');
 
             let ti = 0;
             if(mode === 'TC') {
-                ti = parseFloat(document.getElementById('temp-direct').value);
+                ti = parseFloat(document.getElementById('temp-tc').value);
             } else {
-                const avg = (parseFloat(document.getElementById('l1').value) + parseFloat(document.getElementById('l2').value) + parseFloat(document.getElementById('l3').value)) / 3;
-                ti = avg * 3.5;
+                const l1 = parseFloat(document.getElementById('l1').value);
+                const l3 = parseFloat(document.getElementById('l3').value);
+                if(Math.abs(l1-l3) > 80) document.getElementById('banana-alert').innerText = "⚠️ EFECTO BANANA DETECTADO";
+                else document.getElementById('banana-alert').innerText = "";
+                ti = ((l1 + parseFloat(document.getElementById('l2').value) + l3) / 3) * 3.5;
             }
 
-            if(isNaN(ti) || ti <= 0) return alert('Temperatura inválida');
-
-            logs.unshift({ time: new Date().toLocaleTimeString(), ti: ti.toFixed(1), mode: mode, op: op });
-            localStorage.setItem('otm_logs', JSON.stringify(logs));
             document.getElementById('ti-val').innerText = `${ti.toFixed(1)}°C`;
+            document.getElementById('draft-icon').innerText = dr > -1.0 ? "⚠️" : "OK";
+            document.getElementById('draft-advice').innerText = dr > -1.0 ? "ABRIR DÁMPER" : "TIRO ÓPTIMO";
+
+            logs.unshift({ time: new Date().toLocaleTimeString(), ti: ti.toFixed(1), dr: dr, op: op });
+            localStorage.setItem('otm_logs', JSON.stringify(logs));
             renderLogs();
         }
 
         function renderLogs() {
-            const body = document.getElementById('log-body');
-            body.innerHTML = logs.slice(0, 10).map(l => `<tr><td>${l.time}</td><td>${l.ti}°</td><td>${l.mode}</td><td>${l.op}</td></tr>`).join('');
+            document.getElementById('log-body').innerHTML = logs.slice(0,8).map(l => 
+                `<tr><td>${l.time}</td><td>${l.ti}°</td><td>${l.dr}</td><td>${l.op}</td></tr>`
+            ).join('');
         }
 
         function exportCSV() {
-            let csv = "Hora,Ti,Modo,Operador\n";
-            logs.forEach(l => { csv += `${l.time},${l.ti},${l.mode},${l.op}\n`; });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = window.URL.createObjectURL(blob);
-            a.download = 'log_horno.csv';
-            a.click();
+            let csv = "Hora,Ti,Draft,Operador\n";
+            logs.forEach(l => csv += `${l.time},${l.ti},${l.dr},${l.op}\n`);
+            const blob = new Blob([csv], {type:'text/csv'});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'OTM_REPORT.csv'; a.click();
         }
     </script>
 </body>
